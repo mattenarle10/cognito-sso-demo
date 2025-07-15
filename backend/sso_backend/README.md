@@ -19,10 +19,9 @@ The SSO backend follows a clean, modular architecture with the following compone
 
 1. Create a `.env.dev.yml` file with the following environment variables:
    ```yaml
-   MAIN_TABLE: matt-cognito-hop-main
-   COGNITO_USER_POOL_ID: ap-southeast-2_VwKhOLJk1
-   COGNITO_APP_CLIENT_ID: 7gl0eh7v9ftv5j0pvs6rt92mo6
-   AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+   MAIN_TABLE: ur main db table name
+   COGNITO_USER_POOL_ID: user pool id
+   COGNITO_APP_CLIENT_ID: ur client id
    ```
 
 ## Deployment
