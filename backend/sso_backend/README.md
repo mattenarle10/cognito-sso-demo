@@ -43,34 +43,3 @@ npm install
 serverless deploy --stage dev
 ```
 
-## Post-Confirmation Lambda
-
-The post-confirmation Lambda function is triggered after a user confirms their registration in Cognito. It performs the following actions:
-
-1. Extracts user attributes from the Cognito event
-2. Creates a user record in DynamoDB
-3. Creates an application-user relationship record in DynamoDB
-
-### Testing the Post-Confirmation Lambda
-
-1. Deploy the SSO backend using the instructions above
-2. Configure the Lambda as a post-confirmation trigger in your Cognito User Pool:
-   - Go to the AWS Console > Cognito > User Pools > Your User Pool
-   - Under "User Pool Properties" > "Lambda Triggers"
-   - Set the "Post confirmation" trigger to your deployed Lambda function
-3. Register a new user in Cognito
-4. Confirm the user with the verification code
-5. Check CloudWatch logs to verify the Lambda execution
-6. Check DynamoDB to verify that the user and application-user records were created
-
-## Next Steps
-
-After successfully testing the post-confirmation Lambda, the next steps are:
-
-1. Implement the SSO Backend APIs:
-   - `GET /validate-app-channel`
-   - `GET /check-app-user`
-   - `POST /init-session`
-   - `GET /get-session`
-2. Implement JWT validation helper
-3. Implement the client backend
