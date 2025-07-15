@@ -1,17 +1,101 @@
+# Cognito SSO Project Structure
+
+## Project Overview
+
+This project implements a serverless architecture for a Cognito-based Single Sign-On (SSO) system with the following components:
+
+```
+/cognito-hop/
 ├── backend/
-│   ├── sso_backend/
-│   │   ├── app.py
-│   │   ├── services/
-│   │   ├── models/
-│   │   └── routes/
-│   └── client_backend/
-│       ├── app.py
-│       ├── services/
-│       └── models/
+│   ├── sso_backend/              # SSO Backend
+│   │   ├── serverless.yml        # Serverless config for SSO backend
+│   │   ├── app/
+│   │   │   ├── domains/          # Business logic
+│   │   │   │   ├── user_domain.py
+│   │   │   │   ├── application_domain.py
+│   │   │   │   └── session_domain.py
+│   │   │   ├── handlers/         # Lambda handlers
+│   │   │   │   ├── triggers/     # Cognito triggers
+│   │   │   │   │   └── post_confirmation.py
+│   │   │   │   └── http/         # API endpoints
+│   │   │   │       ├── validate_app_channel.py
+│   │   │   │       ├── check_app_user.py
+│   │   │   │       ├── init_session.py
+│   │   │   │       └── get_session.py
+│   │   │   ├── services/         # External service integrations
+│   │   │   │   ├── aws/          # AWS service wrappers
+│   │   │   │   │   ├── cognito_service.py
+│   │   │   │   │   └── dynamodb_service.py
+│   │   │   │   └── repositories/ # Database access
+│   │   │   │       ├── user_repository.py
+│   │   │   │       ├── application_repository.py
+│   │   │   │       └── session_repository.py
+│   │   │   └── utils/            # Utility functions
+│   │   │       ├── response.py   # API response formatting
+│   │   │       ├── jwt_helper.py # JWT validation
+│   │   │       └── exceptions.py # Custom exceptions
+│   │   └── requirements.txt      # Python dependencies for SSO backend
+│   └── client_backend/           # Client Backend
+│       ├── serverless.yml        # Serverless config for client backend
+│       ├── app/
+│       │   ├── domains/          # Business logic
+│       │   │   └── order_domain.py
+│       │   ├── handlers/         # Lambda handlers
+│       │   │   └── http/         # API endpoints
+│       │   │       └── get_orders.py
+│       │   ├── services/         # External service integrations
+│       │   │   ├── aws/          # AWS service wrappers
+│       │   │   │   └── dynamodb_service.py
+│       │   │   └── repositories/ # Database access
+│       │   │       └── order_repository.py
+│       │   └── utils/            # Utility functions
+│       │       ├── response.py   # API response formatting
+│       │       └── jwt_helper.py # JWT validation
+│       └── requirements.txt      # Python dependencies for client backend
 ├── frontend/
-│   ├── sso_fe/        # Vue app for SSO
-│   └── client_fe/     # Vue app for client app
+│   ├── sso_fe/                   # Vue app for SSO
+│   │   └── src/                  # SSO frontend source code
+│   └── client_fe/                # Vue app for client app
+│       └── src/                  # Client frontend source code
 └── README.md
+```
+
+## Implementation Plan
+
+### Phase 1: Cognito Setup (Completed)
+- Created Cognito User Pool with email as username
+- Added required attributes: name, email, phone number
+- Added custom attributes: gender, accepts_marketing
+- Created App Client with USER_PASSWORD_AUTH flow
+
+### Phase 2: DynamoDB Setup (Completed)
+- Created main table: matt-cognito-hop-main
+- Created orders table: matt-cognito-hop-orders
+- Added sample application record
+
+### Phase 3: SSO Backend (Current Phase)
+
+#### Step 1: Post-Confirmation Lambda
+- Implement Lambda function triggered after user confirmation
+- Save user data to DynamoDB
+- Create application-user relationship
+
+#### Step 2: SSO Backend APIs
+- `GET /validate-app-channel` → checks if application_id + channel_id exist
+- `GET /check-app-user` → checks if user is authorized for the app
+- `POST /init-session` → stores token set, returns session_id
+- `GET /get-session` → given session_id, return token set
+
+#### Step 3: JWT Helper
+- Implement JWT validation using Cognito JWKS
+
+### Phase 4: Client Backend
+- `GET /orders` → Validate ID Token and return user's orders
+
+### Phase 5: Frontend Applications
+- Implement SSO Frontend (Login, Register)
+- Implement Client Frontend (Home, Orders)
+
 
 ### 🔧 Step-by-step Cognito Setup 
 
@@ -193,13 +277,3 @@ Use same JWT verifier (`python-jose`) + OOP patterns.
 5. Orders queried by BE with JWT verification
 
 ---
-
-## 🚀 Final Phase: Reusability + Future Prep
-
-To prepare for future projects:
-
-- Modularize session + auth handling
-- Create reusable token validator module
-- Create helper SDK for your FE to wrap SSO flows
-- Build infra as IaC later (CDK or Terraform)
-- Monitor logs via CloudWatch

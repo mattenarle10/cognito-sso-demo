@@ -1,0 +1,38 @@
+service: matt-cognito-hop-sso-backend
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: python3.12
+  region: ap-southeast-2
+  stage: ${opt:stage, 'dev'}
+  memorySize: 128
+  timeout: 10
+  environment: ${file(./.env.${self:provider.stage}.yml)}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: 
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.MAIN_TABLE}
+
+functions:
+  # Cognito Triggers
+  postConfirmation:
+    handler: app.handlers.triggers.post_confirmation.handler
+    description: "Triggered after user confirms registration in Cognito"
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: false

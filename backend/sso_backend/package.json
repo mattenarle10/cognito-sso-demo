@@ -1,0 +1,14 @@
+{
+  "name": "matt-cognito-hop-sso-backend",
+  "version": "1.0.0",
+  "description": "SSO Backend for Cognito SSO project",
+  "main": "index.js",
+  "scripts": {
+    "deploy": "serverless deploy",
+    "deploy:dev": "serverless deploy --stage dev",
+    "remove": "serverless remove"
+  },
+  "devDependencies": {
+    "serverless-python-requirements": "^6.0.0"
+  }
+}

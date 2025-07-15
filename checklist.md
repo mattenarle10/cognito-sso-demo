@@ -23,7 +23,7 @@ client id: 7gl0eh7v9ftv5j0pvs6rt92mo6
     - [x]  Allow "USER_PASSWORD_AUTH"
     - [x]  Enable token expiration
 - [ ]  Enable Lambda triggers
-    - [ ]  **PostConfirmation** trigger to save user to DynamoDB
+    - [ ]  **PostConfirmation** trigger to save user to DynamoDB (in progress)
 - [x]  Note down:
     - [x]  User Pool ID: ap-southeast-2_VwKhOLJk1
     - [x]  App Client ID: 7gl0eh7v9ftv5j0pvs6rt92mo6
@@ -33,15 +33,15 @@ client id: 7gl0eh7v9ftv5j0pvs6rt92mo6
 
 ### 🗄️ **PHASE 2: DynamoDB Setup**
 
-- [ ]  Create **Main Table**
-    - [ ]  `application`
-    - [ ]  `user`
-    - [ ]  `application-user`
-    - [ ]  `session`
-- [ ]  Create **Orders Table**
-    - [ ]  With `user_id`, `order_id`
-- [ ]  Write sample seed data:
-    - [ ]  Sample application + channel + return URL
+- [x]  Create **Main Table**
+    - [x]  `application`
+    - [x]  `user`
+    - [x]  `application-user`
+    - [x]  `session`
+- [x]  Create **Orders Table**
+    - [x]  With `user_id`, `order_id`
+- [x]  Write sample seed data:
+    - [x]  Sample application + channel + return URL
 
 ---
 
@@ -51,7 +51,7 @@ client id: 7gl0eh7v9ftv5j0pvs6rt92mo6
 - [ ]  API: `GET /check-app-user` → checks if user is authorized for the app
 - [ ]  API: `POST /init-session` → stores token set, returns session_id
 - [ ]  API: `GET /get-session` → given session_id, return token set
-- [ ]  Lambda: `post_confirmation_lambda.py` → saves user + app-user in DynamoDB
+- [x]  Lambda: `post_confirmation.py` → saves user + app-user in DynamoDB (implementation complete, pending deployment)
 - [ ]  JWT Helper: Validate Cognito ID tokens using Cognito JWKS
 - [ ]  DynamoDB Helper: Store + read from single-table design
 - [ ]  Error Handling: 403 if app not authorized
