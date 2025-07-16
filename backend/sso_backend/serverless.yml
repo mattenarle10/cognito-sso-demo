@@ -10,6 +10,8 @@ provider:
   memorySize: 128
   timeout: 10
   environment: ${file(./.env.${self:provider.stage}.yml)}
+  httpApi:
+    cors: true
   iam:
     role:
       statements:
@@ -29,6 +31,15 @@ functions:
   postConfirmation:
     handler: app.handlers.triggers.post_confirmation.handler
     description: "Triggered after user confirms registration in Cognito"
+  
+  # HTTP APIs
+  validateAppChannel:
+    handler: app.handlers.http.validate_app_channel.handler
+    description: "Validates if application_id + channel_id combination exists"
+    events:
+      - httpApi:
+          path: /validate-app-channel
+          method: get
 
 plugins:
   - serverless-python-requirements
