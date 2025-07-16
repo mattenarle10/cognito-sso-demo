@@ -40,6 +40,14 @@ functions:
       - httpApi:
           path: /validate-app-channel
           method: get
+  
+  checkAppUser:
+    handler: app.handlers.http.check_app_user.handler
+    description: "Checks if user is authorized for the specified application"
+    events:
+      - httpApi:
+          path: /check-app-user
+          method: get
 
 plugins:
   - serverless-python-requirements

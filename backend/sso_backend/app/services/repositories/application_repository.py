@@ -102,3 +102,37 @@ class ApplicationRepository:
                 return True, channel.get('return_url')
         
         return False, None
+    
+    def find_user_by_sub(self, cognito_sub):
+        """
+        Find a user by their Cognito sub.
+        Note: In production, this should use a GSI on the sub attribute.
+        For now, we'll scan the table (not efficient, but works for testing).
+        
+        Args:
+            cognito_sub (str): The Cognito sub
+            
+        Returns:
+            dict: The user item if found, None otherwise
+        """
+        # This is a simplified implementation that scans the table
+        # In production, you would create a GSI on the sub attribute
+        
+        # For now, let's query items where SK = "user" and scan for matching sub
+        import boto3
+        from boto3.dynamodb.conditions import Key, Attr
+        
+        try:
+            # Scan for user records with matching sub
+            response = self.dynamodb_service.dynamodb.Table(self.dynamodb_service.main_table_name).scan(
+                FilterExpression=Attr('SK').eq('user') & Attr('sub').eq(cognito_sub)
+            )
+            
+            items = response.get('Items', [])
+            if items:
+                return items[0]  # Return the first matching user
+            return None
+            
+        except Exception as e:
+            print(f"Error finding user by sub: {str(e)}")
+            return None
