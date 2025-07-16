@@ -81,12 +81,40 @@ export function useApi() {
     }
   }
 
+  // authorize application with granted scopes
+  const authorizeApplication = async (data: {
+    application_id: string
+    granted_scopes: string[]
+    action: 'approve' | 'deny'
+  }): Promise<{ status: string; scopes_granted?: string[] } | null> => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const idToken = localStorage.getItem('id_token')
+      if (!idToken) {
+        throw new Error('no authentication token found')
+      }
+
+      const response = await apiClient.post('/authorize-application', data, {
+        headers: { Authorization: `Bearer ${idToken}` }
+      })
+      return response.data.data
+    } catch (err: any) {
+      error.value = err.response?.data?.message || 'authorization failed'
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     loading,
     error,
     validateAppChannel,
     checkAppUser,
     initSession,
-    getSession
+    getSession,
+    authorizeApplication
   }
 } 

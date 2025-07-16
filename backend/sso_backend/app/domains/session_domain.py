@@ -50,10 +50,17 @@ class SessionDomain:
         
         user_id = user['PK']  # extract user_id
         
-        # check if user is authorized for this application
-        is_authorized = self.application_repository.check_app_user_authorization(application_id, user_id)
+        # check if user is authorized for this application with required scopes
+        # For now, we'll check basic authorization - in future we can add scope validation
+        required_scopes = ['profile', 'email']  # Basic scopes for SSO
+        is_authorized, missing_scopes = self.application_repository.check_user_scope_authorization(
+            application_id, user_id, required_scopes
+        )
         if not is_authorized:
-            raise ValueError(f"user not authorized for application {application_id}")
+            if missing_scopes:
+                raise ValueError(f"user has not granted required permissions: {', '.join(missing_scopes)}")
+            else:
+                raise ValueError(f"user not authorized for application {application_id}")
         
         # create the session with tokens
         session_id = self.session_repository.create_session(user_id, cognito_tokens, application_id)

@@ -136,3 +136,95 @@ class ApplicationRepository:
         except Exception as e:
             print(f"Error finding user by sub: {str(e)}")
             return None
+    
+    def get_user_authorization(self, application_id, user_id):
+        """
+        Get user authorization for an application.
+        
+        Args:
+            application_id (str): The application ID
+            user_id (str): The user ID
+            
+        Returns:
+            dict: The authorization item if found, None otherwise
+        """
+        key = {
+            "PK": f"authorization-{application_id}",
+            "SK": user_id
+        }
+        return self.dynamodb_service.get_item(key)
+    
+    def create_user_authorization(self, application_id, user_id, scopes_granted):
+        """
+        Create or update user authorization for an application with specific scopes.
+        
+        Args:
+            application_id (str): The application ID
+            user_id (str): The user ID
+            scopes_granted (list): List of scopes the user granted
+            
+        Returns:
+            dict: The created authorization item
+        """
+        from datetime import datetime
+        
+        # Current timestamp
+        timestamp = datetime.now().isoformat()
+        
+        # Create authorization record with granular scopes
+        authorization_item = {
+            "PK": f"authorization-{application_id}",
+            "SK": user_id,
+            "application_id": application_id,
+            "user_id": user_id,
+            "scopes_granted": scopes_granted,
+            "status": "active",
+            "granted_at": timestamp
+        }
+        
+        # Save to DynamoDB
+        self.dynamodb_service.put_item(authorization_item)
+        
+        return authorization_item
+    
+    def revoke_user_authorization(self, application_id, user_id):
+        """
+        Revoke user authorization for an application.
+        
+        Args:
+            application_id (str): The application ID
+            user_id (str): The user ID
+        """
+        from datetime import datetime
+        
+        # Get existing authorization
+        authorization = self.get_user_authorization(application_id, user_id)
+        if authorization:
+            # Update status to revoked
+            authorization['status'] = 'revoked'
+            authorization['revoked_at'] = datetime.now().isoformat()
+            
+            # Save updated item
+            self.dynamodb_service.put_item(authorization)
+    
+    def check_user_scope_authorization(self, application_id, user_id, required_scopes):
+        """
+        Check if user has authorized specific scopes for an application.
+        
+        Args:
+            application_id (str): The application ID
+            user_id (str): The user ID
+            required_scopes (list): List of scopes required
+            
+        Returns:
+            tuple: (bool, list) - (has_all_scopes, missing_scopes)
+        """
+        authorization = self.get_user_authorization(application_id, user_id)
+        
+        if not authorization or authorization.get('status') != 'active':
+            return False, required_scopes
+        
+        granted_scopes = authorization.get('scopes_granted', [])
+        missing_scopes = [scope for scope in required_scopes if scope not in granted_scopes]
+        
+        return len(missing_scopes) == 0, missing_scopes

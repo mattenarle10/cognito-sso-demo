@@ -32,6 +32,10 @@ functions:
     handler: app.handlers.triggers.post_confirmation.handler
     description: "Triggered after user confirms registration in Cognito"
   
+  postSignIn:
+    handler: app.handlers.triggers.post_signin.handler
+    description: "Triggered after user signs in to check authorization status"
+  
   # HTTP APIs
   validateAppChannel:
     handler: app.handlers.http.validate_app_channel.handler
@@ -64,6 +68,14 @@ functions:
       - httpApi:
           path: /get-session
           method: get
+  
+  authorizeApplication:
+    handler: app.handlers.http.authorize_application.handler
+    description: "Handles user consent and creates authorization grants"
+    events:
+      - httpApi:
+          path: /authorize-application
+          method: post
 
 plugins:
   - serverless-python-requirements

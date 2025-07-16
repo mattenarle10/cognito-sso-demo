@@ -37,9 +37,9 @@ export interface ConfirmSignUpParams {
 }
 
 export interface CognitoTokens {
-  accessToken: string
-  idToken: string
-  refreshToken?: string
+  access_token: string
+  id_token: string
+  refresh_token?: string
 }
 
 class CognitoService {
@@ -68,9 +68,9 @@ class CognitoService {
       }
 
       return {
-        accessToken: AccessToken,
-        idToken: IdToken,
-        refreshToken: RefreshToken
+        access_token: AccessToken,
+        id_token: IdToken,
+        refresh_token: RefreshToken
       }
     } catch (error: any) {
       console.error('cognito signin error:', error)
