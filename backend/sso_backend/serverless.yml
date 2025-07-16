@@ -56,6 +56,14 @@ functions:
       - httpApi:
           path: /init-session
           method: post
+  
+  getSession:
+    handler: app.handlers.http.get_session.handler
+    description: "Retrieves cognito tokens by session_id"
+    events:
+      - httpApi:
+          path: /get-session
+          method: get
 
 plugins:
   - serverless-python-requirements
