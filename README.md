@@ -4,11 +4,11 @@ A serverless application implementing Single Sign-On (SSO) with AWS Cognito and 
 
 ## Architecture
 
-### Backend
-- **SSO Backend**: Handles authentication, user management, and session control
-- **Client Backend**: Manages application-specific features (e.g., orders)
+### Backend 
+- **SSO Backend**: Handles authentication, user management, and session control (4 APIs deployed)
+- **Client Backend**: Manages application-specific features (e.g., orders) (1 API deployed)
 
-### Frontend
+### Frontend 🔄 NEXT PHASE
 - **SSO Frontend**: User authentication interface
 - **Client Application**: Business application using SSO
 
