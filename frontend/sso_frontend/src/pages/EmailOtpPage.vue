@@ -63,6 +63,7 @@ import { useRoute, useRouter } from 'vue-router'
 import BaseInput from '../components/ui/BaseInput.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import { useApi } from '../composables/useApi'
+import { cognitoService } from '../services/cognitoService'
 
 const route = useRoute()
 const router = useRouter()
@@ -114,16 +115,13 @@ const handleOtpVerification = async () => {
   loading.value = true
 
   try {
-    // todo: implement cognito email verification
-    console.log('verifying otp:', {
+    // cognito email verification
+    await cognitoService.confirmSignUp({
       email: email.value,
       code: otpCode.value
     })
-
-    // placeholder - replace with actual cognito verification
-    await new Promise(resolve => setTimeout(resolve, 1000))
     
-    // after successful verification, redirect to login or back to app
+    // after successful verification, redirect to login
     const loginQuery = {
       application_name: appName.value,
       channel_id: channelId.value
@@ -149,11 +147,8 @@ const resendOtp = async () => {
   loading.value = true
 
   try {
-    // todo: implement cognito resend confirmation code
-    console.log('resending otp to:', email.value)
-    
-    // placeholder - replace with actual cognito resend
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // cognito resend confirmation code
+    await cognitoService.resendConfirmationCode(email.value)
     
     // start cooldown timer
     resendCooldown.value = 30

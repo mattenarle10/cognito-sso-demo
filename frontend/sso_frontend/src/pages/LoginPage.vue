@@ -57,10 +57,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import BaseInput from '../components/ui/BaseInput.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import type { LoginCredentials } from '../types/auth'
+import { cognitoService } from '../services/cognitoService'
+import { useApi } from '../composables/useApi'
 
 // Form data
 const formData = ref<LoginCredentials>({
@@ -75,6 +77,8 @@ const errors = ref<Record<string, string>>({})
 
 // Route handling for URL parameters
 const route = useRoute()
+const router = useRouter()
+const api = useApi()
 const appName = ref('')
 const channelId = ref('')
 
@@ -104,14 +108,25 @@ const handleLogin = async () => {
   errors.value = {}
 
   try {
-    // todo: implement cognito login
-    console.log('Login attempt:', formData.value)
-    
-    // placeholder - will implement cognito auth here
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // cognito authentication
+    const tokens = await cognitoService.signIn({
+      email: formData.value.email,
+      password: formData.value.password
+    })
+
+         // create session with sso backend
+     const sessionResponse = await api.initSession(tokens, appName.value)
+
+     // redirect back to client app with session_id
+     if (sessionResponse) {
+       const redirectUrl = route.query.redirect_url as string || 'http://localhost:8000'
+       window.location.href = `${redirectUrl}?session_id=${sessionResponse.session_id}`
+     } else {
+       throw new Error('failed to create session')
+     }
     
   } catch (err: any) {
-    error.value = err.message || 'Login failed'
+    error.value = err.message || 'login failed'
   } finally {
     loading.value = false
   }

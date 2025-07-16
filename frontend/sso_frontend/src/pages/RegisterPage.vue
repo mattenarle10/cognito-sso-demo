@@ -145,10 +145,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import BaseInput from '../components/ui/BaseInput.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import type { RegisterData } from '../types/auth'
+import { cognitoService } from '../services/cognitoService'
 
 // Form data
 const formData = ref<RegisterData>({
@@ -169,6 +170,7 @@ const otpCode = ref('')
 
 // Route handling for URL parameters
 const route = useRoute()
+const router = useRouter()
 const appName = ref('')
 const channelId = ref('')
 
@@ -202,14 +204,25 @@ const handleRegister = async () => {
   errors.value = {}
 
   try {
-    // todo: implement cognito registration
-    console.log('Register attempt:', formData.value)
+    // cognito registration
+    await cognitoService.signUp({
+      email: formData.value.email,
+      password: formData.value.password,
+      phone: formData.value.phone,
+      name: formData.value.name,
+      gender: formData.value.gender,
+      acceptsMarketing: formData.value.accepts_marketing || false
+    })
     
-    // placeholder - will implement cognito auth here
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // move to otp step
-    step.value = 'otp'
+    // redirect to separate otp page
+    router.push({
+      name: 'email-otp',
+      query: {
+        email: formData.value.email,
+        application_name: appName.value,
+        channel_id: channelId.value
+      }
+    })
     
   } catch (err: any) {
     error.value = err.message || 'Registration failed'
