@@ -211,7 +211,9 @@ const handleRegister = async () => {
       phone: formData.value.phone,
       name: formData.value.name,
       gender: formData.value.gender,
-      acceptsMarketing: formData.value.accepts_marketing || false
+      acceptsMarketing: formData.value.accepts_marketing || false,
+      applicationName: appName.value,
+      channelId: channelId.value
     })
     
     // redirect to separate otp page

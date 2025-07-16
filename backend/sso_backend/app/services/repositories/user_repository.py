@@ -35,7 +35,7 @@ class UserRepository:
         email = cognito_attributes['email']
         name = cognito_attributes.get('name', '')
         phone_number = cognito_attributes.get('phone_number', '')
-        gender = cognito_attributes.get('custom:gender', '')
+        gender = cognito_attributes.get('gender', '')
         accepts_marketing = cognito_attributes.get('custom:accepts_marketing', 'false')
         
         # Current timestamp

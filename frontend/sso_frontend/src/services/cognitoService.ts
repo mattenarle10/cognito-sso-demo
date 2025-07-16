@@ -27,6 +27,8 @@ export interface SignUpParams {
   name: string
   gender: string
   acceptsMarketing: boolean
+  applicationName?: string
+  channelId?: string
 }
 
 export interface ConfirmSignUpParams {
@@ -76,7 +78,7 @@ class CognitoService {
     }
   }
 
-  async signUp({ email, password, phone, name, gender, acceptsMarketing }: SignUpParams): Promise<void> {
+  async signUp({ email, password, phone, name, gender, acceptsMarketing, applicationName, channelId }: SignUpParams): Promise<void> {
     const params: SignUpCommandInput = {
       ClientId: cognitoConfig.clientId,
       Username: email,
@@ -87,7 +89,11 @@ class CognitoService {
         { Name: 'name', Value: name },
         { Name: 'gender', Value: gender },
         { Name: 'custom:accepts_marketing', Value: acceptsMarketing.toString() }
-      ]
+      ],
+      ClientMetadata: {
+        application_name: applicationName || '',
+        channel_id: channelId || ''
+      }
     }
 
     try {

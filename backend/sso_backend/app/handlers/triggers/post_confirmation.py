@@ -35,8 +35,15 @@ def handler(event, context):
         # Extract user attributes from Cognito event
         user_attributes = event['request']['userAttributes']
         
-        # Default application ID - in a real implementation, you might get this from client metadata
-        application_id = "mattcoffee"
+        # Get application context from ClientMetadata
+        client_metadata = event['request'].get('clientMetadata', {})
+        application_name = client_metadata.get('application_name', '')
+        channel_id = client_metadata.get('channel_id', '')
+        
+        # Use application_name as application_id (or fallback to default for testing)
+        application_id = application_name if application_name else "default_app"
+        
+        print(f"Registration context - Application: {application_name}, Channel: {channel_id}")
         
         # Register the user using the domain layer
         user_id, user_item = user_domain.register_user(user_attributes, application_id)
