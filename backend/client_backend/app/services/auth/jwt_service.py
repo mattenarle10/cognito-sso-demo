@@ -58,7 +58,7 @@ class JWTService:
             decoded_token = jwt.decode(
                 id_token,
                 key,
-                algorithms=['RS256'],  # only allow rs256, no funny business
+                algorithms=['RS256'],  # only allow rs256
                 audience=self.app_client_id,  # make sure token is for our app
                 issuer=f"https://cognito-idp.{self.region}.amazonaws.com/{self.user_pool_id}"  # from our cognito
             )
