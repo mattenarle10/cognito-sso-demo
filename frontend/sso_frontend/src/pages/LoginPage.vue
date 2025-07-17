@@ -108,10 +108,12 @@ const handleLogin = async () => {
   errors.value = {}
 
   try {
-    // cognito authentication
+    // cognito authentication with application context
     const tokens = await cognitoService.signIn({
       email: formData.value.email,
-      password: formData.value.password
+      password: formData.value.password,
+      applicationName: appName.value,
+      channelId: channelId.value
     })
 
          // create session with sso backend

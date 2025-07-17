@@ -23,18 +23,28 @@ provider:
             - dynamodb:PutItem
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
+            - dynamodb:BatchWriteItem
           Resource: 
             - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.MAIN_TABLE}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.MAIN_TABLE}/index/*
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: arn:aws:logs:${self:provider.region}:*:*
 
 functions:
   # Cognito Triggers
   postConfirmation:
     handler: app.handlers.triggers.post_confirmation.handler
     description: "Triggered after user confirms registration in Cognito"
+    environment: ${self:provider.environment}
   
   postSignIn:
     handler: app.handlers.triggers.post_signin.handler
     description: "Triggered after user signs in to check authorization status"
+    environment: ${self:provider.environment}
   
   # HTTP APIs
   validateAppChannel:

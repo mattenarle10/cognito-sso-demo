@@ -18,6 +18,8 @@ const cognitoClient = new CognitoIdentityProviderClient({
 export interface SignInParams {
   email: string
   password: string
+  applicationName?: string
+  channelId?: string
 }
 
 export interface SignUpParams {
@@ -34,6 +36,8 @@ export interface SignUpParams {
 export interface ConfirmSignUpParams {
   email: string
   code: string
+  applicationName?: string
+  channelId?: string
 }
 
 export interface CognitoTokens {
@@ -43,13 +47,17 @@ export interface CognitoTokens {
 }
 
 class CognitoService {
-  async signIn({ email, password }: SignInParams): Promise<CognitoTokens> {
+  async signIn({ email, password, applicationName, channelId }: SignInParams): Promise<CognitoTokens> {
     const params: InitiateAuthCommandInput = {
       AuthFlow: 'USER_PASSWORD_AUTH',
       ClientId: cognitoConfig.clientId,
       AuthParameters: {
         USERNAME: email,
         PASSWORD: password
+      },
+      ClientMetadata: {
+        application_name: applicationName || '',
+        channel_id: channelId || ''
       }
     }
 
@@ -105,11 +113,15 @@ class CognitoService {
     }
   }
 
-  async confirmSignUp({ email, code }: ConfirmSignUpParams): Promise<void> {
+  async confirmSignUp({ email, code, applicationName, channelId }: ConfirmSignUpParams): Promise<void> {
     const params: ConfirmSignUpCommandInput = {
       ClientId: cognitoConfig.clientId,
       Username: email,
-      ConfirmationCode: code
+      ConfirmationCode: code,
+      ClientMetadata: {
+        application_name: applicationName || '',
+        channel_id: channelId || ''
+      }
     }
 
     try {

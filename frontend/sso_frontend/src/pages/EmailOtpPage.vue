@@ -115,10 +115,12 @@ const handleOtpVerification = async () => {
   loading.value = true
 
   try {
-    // cognito email verification
+    // cognito email verification with application context
     await cognitoService.confirmSignUp({
       email: email.value,
-      code: otpCode.value
+      code: otpCode.value,
+      applicationName: appName.value,
+      channelId: channelId.value
     })
     
     // after successful verification, redirect to login

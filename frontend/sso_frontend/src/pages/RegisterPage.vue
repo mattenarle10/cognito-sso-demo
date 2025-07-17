@@ -8,7 +8,7 @@
       </div>
 
       <!-- Registration Form -->
-      <form v-if="step === 'register'" @submit.prevent="handleRegister" class="register-form">
+      <form @submit.prevent="handleRegister" class="register-form">
         <BaseInput
           id="email"
           type="email"
@@ -87,46 +87,6 @@
         </BaseButton>
       </form>
 
-      <!-- OTP Verification Form -->
-      <div v-if="step === 'otp'" class="otp-form">
-        <div class="otp-header">
-          <h2>Verify Your Email</h2>
-          <p>We've sent a verification code to {{ formData.email }}</p>
-        </div>
-
-        <form @submit.prevent="handleOtpVerification">
-          <BaseInput
-            id="otp"
-            type="text"
-            label="Verification Code"
-            placeholder="Enter 6-digit code"
-            v-model="otpCode"
-            :required="true"
-            :error="errors.otp"
-          />
-
-          <BaseButton
-            type="submit"
-            :loading="loading"
-            :disabled="!otpCode"
-            style="width: 100%; margin-top: 1rem;"
-          >
-            Verify Email
-          </BaseButton>
-        </form>
-
-        <div class="otp-footer">
-          <button 
-            type="button" 
-            @click="resendOtp" 
-            :disabled="loading"
-            class="resend-link"
-          >
-            Resend code
-          </button>
-        </div>
-      </div>
-
       <!-- Login Link -->
       <div class="footer">
         <p>
@@ -165,8 +125,6 @@ const formData = ref<RegisterData>({
 const loading = ref(false)
 const error = ref('')
 const errors = ref<Record<string, string>>({})
-const step = ref<'register' | 'otp'>('register')
-const otpCode = ref('')
 
 // Route handling for URL parameters
 const route = useRoute()
@@ -232,43 +190,6 @@ const handleRegister = async () => {
     loading.value = false
   }
 }
-
-const handleOtpVerification = async () => {
-  loading.value = true
-  error.value = ''
-  errors.value = {}
-
-  try {
-    // todo: implement cognito otp verification
-    console.log('OTP verification:', otpCode.value)
-    
-    // placeholder - will implement cognito confirmation here
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // after successful verification, proceed with login flow
-    
-  } catch (err: any) {
-    error.value = err.message || 'OTP verification failed'
-  } finally {
-    loading.value = false
-  }
-}
-
-const resendOtp = async () => {
-  loading.value = true
-  error.value = ''
-
-  try {
-    // todo: implement resend otp
-    console.log('Resending OTP')
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-  } catch (err: any) {
-    error.value = err.message || 'Failed to resend code'
-  } finally {
-    loading.value = false
-  }
-}
 </script>
 
 <style scoped>
@@ -321,6 +242,20 @@ const resendOtp = async () => {
   margin-bottom: 0.25rem;
 }
 
+.input-field {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
 .error-text {
   margin-top: 0.25rem;
   font-size: 0.875rem;
@@ -340,49 +275,6 @@ const resendOtp = async () => {
 
 .checkbox {
   margin-right: 0.5rem;
-}
-
-.otp-form {
-  margin-bottom: 1.5rem;
-}
-
-.otp-header {
-  text-align: center;
-  margin-bottom: 1.5rem;
-}
-
-.otp-header h2 {
-  font-size: 1.25rem;
-  font-weight: bold;
-  margin-bottom: 0.5rem;
-}
-
-.otp-header p {
-  color: #6b7280;
-  font-size: 0.875rem;
-}
-
-.otp-footer {
-  text-align: center;
-  margin-top: 1rem;
-}
-
-.resend-link {
-  background: none;
-  border: none;
-  color: #2563eb;
-  font-size: 0.875rem;
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.resend-link:hover {
-  color: #1d4ed8;
-}
-
-.resend-link:disabled {
-  color: #9ca3af;
-  cursor: not-allowed;
 }
 
 .footer {

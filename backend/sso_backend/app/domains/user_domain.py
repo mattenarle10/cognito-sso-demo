@@ -30,7 +30,9 @@ class UserDomain:
         # Create the user in DynamoDB
         user_id, user_item = self.user_repository.create_user(cognito_attributes)
         
-        # Create the application-user relationship
+        # Create the application-user relationship (jambyref.md schema)
         self.application_repository.create_app_user_relationship(application_id, user_id)
+        
+        print(f"Successfully created user {user_id} and authorized for application {application_id}")
         
         return user_id, user_item

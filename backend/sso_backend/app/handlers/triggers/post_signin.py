@@ -54,10 +54,10 @@ def handler(event, context):
         
         user_id = user['PK']  # Extract user_id from the user record
         
-        # Check if user has already authorized this application
-        authorization = application_repository.get_user_authorization(application_name, user_id)
+        # Check if user has already authorized this application (jambyref.md simple schema)
+        is_authorized = application_repository.check_app_user_authorization(application_name, user_id)
         
-        if authorization and authorization.get('status') == 'active':
+        if is_authorized:
             print(f"User {user_id} already authorized for application {application_name}")
             return event
         

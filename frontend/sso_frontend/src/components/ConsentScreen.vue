@@ -147,7 +147,7 @@ const approveConsent = async () => {
       action: 'approve'
     })
 
-    if (response.status === 'approved') {
+    if (response && response.status === 'approved') {
       emit('approved', scopesToGrant)
     } else {
       throw new Error('Authorization failed')
