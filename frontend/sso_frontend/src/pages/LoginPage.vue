@@ -121,7 +121,7 @@ const handleLogin = async () => {
 
      // redirect back to client app with session_id
      if (sessionResponse) {
-       const redirectUrl = route.query.redirect_url as string || 'http://localhost:8000'
+       const redirectUrl = route.query.redirect_url as string || 'http://localhost:8080'
        window.location.href = `${redirectUrl}?session_id=${sessionResponse.session_id}`
      } else {
        throw new Error('failed to create session')
