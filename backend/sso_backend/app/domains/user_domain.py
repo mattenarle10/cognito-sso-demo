@@ -17,11 +17,12 @@ class UserDomain:
     
     def register_user(self, cognito_attributes, application_id):
         """
-        Register a new user and authorize them for an application.
+        Register a new user WITHOUT automatically authorizing them for an application.
+        User will need to provide consent on first login.
         
         Args:
             cognito_attributes (dict): User attributes from Cognito
-            application_id (str): The application ID to authorize the user for
+            application_id (str): The application ID (for logging purposes)
             
         Returns:
             str: The generated user_id
@@ -30,9 +31,9 @@ class UserDomain:
         # Create the user in DynamoDB
         user_id, user_item = self.user_repository.create_user(cognito_attributes)
         
-        # Create the application-user relationship (jambyref.md schema)
-        self.application_repository.create_app_user_relationship(application_id, user_id)
+        # DO NOT auto-authorize - user must consent on first login
+        # self.application_repository.create_app_user_relationship(application_id, user_id)
         
-        print(f"Successfully created user {user_id} and authorized for application {application_id}")
+        print(f"Successfully created user {user_id} - will require consent for application {application_id}")
         
         return user_id, user_item

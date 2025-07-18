@@ -48,7 +48,7 @@ def handler(event, context):
         # Register the user using the domain layer
         user_id, user_item = user_domain.register_user(user_attributes, application_id)
         
-        print(f"Successfully created user {user_id} and authorized for application {application_id}")
+        print(f"Successfully created user {user_id} - will require consent for application {application_id}")
         
         # Return the event to Cognito
         return event

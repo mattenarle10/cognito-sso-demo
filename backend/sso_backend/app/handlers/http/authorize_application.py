@@ -133,21 +133,19 @@ def handler(event, context):
                 error_code="NO_SCOPES_GRANTED"
             )
         
-        # Create authorization grant
-        authorization = application_repository.create_user_authorization(
+        # Create authorization grant using simple jambyref schema
+        authorization = application_repository.create_app_user_relationship(
             application_id, 
-            user_id, 
-            granted_scopes
+            user_id
         )
         
-        print(f"Created authorization for user {user_id} and application {application_id} with scopes: {granted_scopes}")
+        print(f"Created authorization for user {user_id} and application {application_id}")
         
         return success_response(
             data={
                 "status": "approved",
                 "authorization_id": f"{application_id}-{user_id}",
-                "scopes_granted": granted_scopes,
-                "granted_at": authorization['granted_at'],
+                "created_at": authorization['created_at'],
                 "message": "Authorization granted successfully"
             }
         )
