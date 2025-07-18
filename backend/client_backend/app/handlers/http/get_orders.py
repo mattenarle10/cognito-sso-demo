@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+from decimal import Decimal
 
 # Add the parent directory to sys.path to allow importing from app modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -16,6 +17,19 @@ dynamodb_service = DynamoDBService()
 order_repository = OrderRepository(dynamodb_service)
 jwt_service = JWTService()
 order_domain = OrderDomain(order_repository, jwt_service)
+
+def convert_decimal_to_float(obj):
+    """
+    recursively convert decimal objects to float for json serialization
+    """
+    if isinstance(obj, list):
+        return [convert_decimal_to_float(item) for item in obj]
+    elif isinstance(obj, dict):
+        return {key: convert_decimal_to_float(value) for key, value in obj.items()}
+    elif isinstance(obj, Decimal):
+        return float(obj)
+    else:
+        return obj
 
 def handler(event, context):
     """
@@ -56,10 +70,13 @@ def handler(event, context):
                 error_code="UNAUTHORIZED"
             )
         
+        # convert decimal objects to float for json serialization
+        orders_serializable = convert_decimal_to_float(orders)
+        
         return success_response(
             data={
-                "orders": orders,
-                "total_orders": len(orders)
+                "orders": orders_serializable,
+                "total_orders": len(orders_serializable)
             },
             message="Orders retrieved successfully"
         )
