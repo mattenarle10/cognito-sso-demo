@@ -1,60 +1,18 @@
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
-import { RouterView, useRoute } from 'vue-router'
+import { onMounted } from 'vue'
+import { RouterView } from 'vue-router'
 import { useAuthStore } from './stores/authStore'
-import { redirectToLogin as loginRedirect } from './router'
-import UserDropdown from './components/UserDropdown.vue'
 
-const route = useRoute()
 const authStore = useAuthStore()
-
-// Hide header on home page to avoid duplication with HomePage.vue's header
-const showHeader = computed(() => route.path !== '/')
-
-// Get user's display name with preference for given_name or first part of full name
-const getUserDisplayName = () => {
-  if (authStore.user?.given_name) {
-    return authStore.user.given_name
-  } else if (authStore.user?.name) {
-    return authStore.user.name.split(' ')[0]
-  } else {
-    return 'User'
-  }
-}
 
 // Initialize auth state on app mount
 onMounted(() => {
   authStore.initialize()
 })
-
-// Use the imported function with a different name
-const redirectToLogin = () => {
-  loginRedirect()
-}
 </script>
 
 <template>
   <div class="app-container">
-    <!-- Only show header on non-home pages -->
-    <header v-if="showHeader" class="app-header">
-      <nav class="app-nav">
-        <div class="nav-brand">THE GRIND</div>
-        <div class="nav-links">
-          <router-link to="/" class="nav-link">Home</router-link>
-          <router-link to="/orders" class="nav-link">Orders</router-link>
-          <router-link to="/about" class="nav-link">About</router-link>
-        </div>
-        <div class="nav-auth">
-          <div v-if="authStore.isAuthenticated">
-            <UserDropdown :userName="getUserDisplayName()" />
-          </div>
-          <div v-else>
-            <button @click="redirectToLogin" class="sign-in-button">SIGN IN</button>
-          </div>
-        </div>
-      </nav>
-    </header>
-    
     <!-- Router view for all pages -->
     <RouterView />
   </div>
@@ -69,6 +27,14 @@ const redirectToLogin = () => {
   --secondary-text: rgba(255, 255, 255, 0.6);
   --accent-color: #646cff;
   --border-color: rgba(255, 255, 255, 0.2);
+  --card-bg: rgba(26, 26, 26, 0.8);
+  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  --transition-speed: 0.3s;
+}
+
+/* Apply a smooth scrolling effect to the whole page */
+html {
+  scroll-behavior: smooth;
 }
 
 body {
@@ -78,6 +44,9 @@ body {
   background-color: var(--primary-bg);
   color: var(--primary-text);
   min-height: 100vh;
+  line-height: 1.6;
+  font-weight: 300;
+  overflow-x: hidden;
 }
 
 #app {
@@ -91,12 +60,53 @@ body {
 button {
   cursor: pointer;
   font-family: inherit;
+  border: none;
+  outline: none;
+  transition: all var(--transition-speed);
 }
 
 /* Reset default link styles */
 a {
   text-decoration: none;
   color: inherit;
+  transition: all var(--transition-speed);
+}
+
+/* Form elements styling */
+input, select, textarea {
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 0.75rem 1rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--primary-text);
+  border-radius: 4px;
+  transition: all var(--transition-speed);
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: rgba(255, 255, 255, 0.5);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 </style>
 
@@ -106,94 +116,21 @@ a {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-}
-
-/* Header styles (only for non-home pages) */
-.app-header {
-  background-color: var(--secondary-bg);
-  padding: 1rem 2rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-}
-
-.app-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.nav-brand {
-  font-size: 1.25rem;
-  font-weight: 300;
-  letter-spacing: 0.1em;
-}
-
-.nav-links {
-  display: flex;
-  gap: 2rem;
-}
-
-.nav-link {
-  font-weight: 300;
-  padding: 0.5rem 0;
   position: relative;
-  transition: color 0.3s;
+  overflow: hidden;
 }
 
-.nav-link:hover,
-.nav-link.router-link-active {
-  color: #fff;
-}
-
-.nav-link::after {
+/* Add subtle animated gradient background */
+.app-container::before {
   content: '';
-  position: absolute;
-  bottom: 0;
+  position: fixed;
+  top: 0;
   left: 0;
-  width: 0;
-  height: 1px;
-  background-color: #fff;
-  transition: width 0.3s;
-}
-
-.nav-link:hover::after,
-.nav-link.router-link-active::after {
   width: 100%;
-}
-
-.sign-in-button {
-  background-color: transparent;
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.2));
-  color: var(--primary-text, white);
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  font-weight: 300;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.sign-in-button:hover {
-  background-color: rgba(255, 255, 255, 1);
-  color: #000;
-}
-
-/* Responsive styles */
-@media (max-width: 768px) {
-  .app-nav {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .nav-links {
-    order: 2;
-  }
-  
-  .nav-auth {
-    order: 3;
-    margin-top: 1rem;
-  }
+  height: 100%;
+  background: radial-gradient(circle at 30% 30%, rgba(30, 30, 30, 0.4) 0%, rgba(0, 0, 0, 0) 70%),
+              radial-gradient(circle at 70% 70%, rgba(30, 30, 30, 0.3) 0%, rgba(0, 0, 0, 0) 70%);
+  z-index: -1;
+  pointer-events: none;
 }
 </style>

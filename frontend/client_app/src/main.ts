@@ -1,3 +1,6 @@
+import './style.css'
+import './assets/toast.css'
+
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
@@ -9,18 +12,22 @@ import 'vue-toastification/dist/index.css'
 
 // Toast configuration
 const toastOptions: PluginOptions = {
-  position: POSITION.TOP_RIGHT,
+  position: POSITION.TOP_RIGHT, 
   timeout: 3000,
   closeOnClick: true,
   pauseOnFocusLoss: true,
   pauseOnHover: true,
   draggable: true,
   draggablePercent: 0.6,
-  showCloseButtonOnHover: false,
+  showCloseButtonOnHover: true,
   hideProgressBar: false,
   closeButton: 'button',
   icon: true,
   rtl: false,
+  // Custom CSS classes for styling
+  toastClassName: 'custom-toast',
+  bodyClassName: 'custom-toast-body',
+  containerClassName: 'custom-toast-container',
   transition: 'Vue-Toastification__fade',
   maxToasts: 5,
   newestOnTop: true,

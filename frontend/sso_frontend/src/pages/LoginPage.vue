@@ -119,7 +119,7 @@ onMounted(() => {
   
   // Check if user just verified their email
   if (route.query.verified === 'true') {
-    toast.success('Email verified successfully! You can now log in.')
+    toast.success('Email verified! Welcome to The Grind.')
   }
   
   // todo: validate app/channel with backend
@@ -155,7 +155,7 @@ const handleLogin = async () => {
     const sessionResponse = await api.initSession(tokens, appName.value)
 
     // Show success toast notification
-    toast.success('Login successful! Redirecting...')
+    toast.success('Welcome back to The Grind!')
     
     // redirect back to client app with session_id
     if (sessionResponse) {

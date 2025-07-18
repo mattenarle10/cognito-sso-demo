@@ -1,0 +1,79 @@
+/* Custom Toast Styles for Dark Theme */
+.custom-toast-container {
+  z-index: 9999;
+}
+
+.custom-toast {
+  background-color: #18181b !important; /* zinc-900 */
+  border: 1px solid rgba(63, 63, 70, 0.5) !important; /* zinc-700/50 */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2) !important;
+  border-radius: 0.5rem !important;
+  padding: 0.75rem 1rem !important;
+  font-family: inherit !important;
+  font-weight: 300 !important;
+  letter-spacing: 0.025em !important;
+}
+
+.custom-toast-body {
+  font-family: inherit !important;
+  color: #e4e4e7 !important; /* zinc-200 */
+  font-size: 0.9rem !important;
+}
+
+/* Success toast */
+.Vue-Toastification__toast--success {
+  background-color: rgba(22, 101, 52, 0.2) !important; /* green-800/20 */
+  border: 1px solid rgba(22, 101, 52, 0.5) !important; /* green-800/50 */
+}
+
+.Vue-Toastification__toast--success .Vue-Toastification__icon {
+  color: #22c55e !important; /* green-500 */
+}
+
+/* Error toast */
+.Vue-Toastification__toast--error {
+  background-color: rgba(127, 29, 29, 0.2) !important; /* red-800/20 */
+  border: 1px solid rgba(127, 29, 29, 0.5) !important; /* red-800/50 */
+}
+
+.Vue-Toastification__toast--error .Vue-Toastification__icon {
+  color: #ef4444 !important; /* red-500 */
+}
+
+/* Info toast */
+.Vue-Toastification__toast--info {
+  background-color: rgba(30, 58, 138, 0.2) !important; /* blue-900/20 */
+  border: 1px solid rgba(30, 58, 138, 0.5) !important; /* blue-900/50 */
+}
+
+.Vue-Toastification__toast--info .Vue-Toastification__icon {
+  color: #3b82f6 !important; /* blue-500 */
+}
+
+/* Warning toast */
+.Vue-Toastification__toast--warning {
+  background-color: rgba(146, 64, 14, 0.2) !important; /* amber-800/20 */
+  border: 1px solid rgba(146, 64, 14, 0.5) !important; /* amber-800/50 */
+}
+
+.Vue-Toastification__toast--warning .Vue-Toastification__icon {
+  color: #f59e0b !important; /* amber-500 */
+}
+
+/* Progress bar */
+.Vue-Toastification__progress-bar {
+  background-color: rgba(255, 255, 255, 0.3) !important;
+  height: 3px !important;
+  bottom: 0 !important;
+}
+
+/* Close button */
+.Vue-Toastification__close-button {
+  color: #a1a1aa !important; /* zinc-400 */
+  opacity: 0.7 !important;
+}
+
+.Vue-Toastification__close-button:hover {
+  color: #e4e4e7 !important; /* zinc-200 */
+  opacity: 1 !important;
+}

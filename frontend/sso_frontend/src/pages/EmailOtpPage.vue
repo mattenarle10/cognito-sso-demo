@@ -220,9 +220,6 @@ const handleOtpVerification = async () => {
       channelId: channelId.value
     })
     
-    // Show success toast notification
-    toast.success("Email verified successfully!")
-    
     // after successful verification, redirect to login
     const loginQuery = {
       application_name: appName.value,
@@ -254,7 +251,7 @@ const resendOtp = async () => {
     await cognitoService.resendConfirmationCode(email.value)
     
     // Show success toast
-    toast.info("Verification code resent to your email")
+    toast.info(`Verification code sent to ${email.value}`)
     
     // start cooldown timer
     resendCooldown.value = 30

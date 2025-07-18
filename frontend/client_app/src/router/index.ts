@@ -56,7 +56,7 @@ router.beforeEach(async (to, _from, next) => {
         authStore.setTokens(tokens)
         
         // Show success toast notification
-        toast.success(`Welcome back, ${authStore.user?.given_name || authStore.user?.name?.split(' ')[0] || 'User'}!`)
+        toast.success(`Welcome to The Grind, ${authStore.user?.given_name || authStore.user?.name?.split(' ')[0] || 'User'}!`)
         
         // Remove session_id from URL for security
         const { query } = to
@@ -65,13 +65,13 @@ router.beforeEach(async (to, _from, next) => {
       }
     } catch (error) {
       console.error('Failed to process session:', error)
-      toast.error('Authentication failed. Please try again.')
+      toast.error('Authentication failed. Please try logging in again.')
     }
   }
   
   // Check for sign-out parameter
   if (to.query.signedout === 'true') {
-    toast.info('You have been signed out successfully')
+    toast.info('You have been signed out. Come back for another brew soon!')
     // Remove signedout parameter from URL
     const { query } = to
     delete query.signedout
