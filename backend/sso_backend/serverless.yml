@@ -87,6 +87,22 @@ functions:
           path: /authorize-application
           method: post
 
+  getUserAuthorizations:
+    handler: app.handlers.http.get_user_authorizations.handler
+    description: "Gets all applications that the current user has authorized"
+    events:
+      - httpApi:
+          path: /user-authorizations
+          method: get
+
+  revokeUserAuthorization:
+    handler: app.handlers.http.revoke_user_authorization.handler
+    description: "Revokes user's authorization for a specific application"
+    events:
+      - httpApi:
+          path: /user-authorizations/{application_id}
+          method: delete
+
 plugins:
   - serverless-python-requirements
 

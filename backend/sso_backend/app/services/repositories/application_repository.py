@@ -228,3 +228,70 @@ class ApplicationRepository:
         missing_scopes = [scope for scope in required_scopes if scope not in granted_scopes]
         
         return len(missing_scopes) == 0, missing_scopes
+    
+    def get_user_authorizations(self, user_id):
+        """
+        Get all applications that a user has authorized.
+        Uses the simple jambyref schema where PK = application-{app_id} and SK = user_id
+        
+        Args:
+            user_id (str): The user ID
+            
+        Returns:
+            list: List of authorized applications with details
+        """
+        import boto3
+        from boto3.dynamodb.conditions import Key, Attr
+        
+        try:
+            # Query for all items where SK = user_id and PK starts with "application-"
+            response = self.dynamodb_service.dynamodb.Table(self.dynamodb_service.main_table_name).scan(
+                FilterExpression=Attr('SK').eq(user_id) & Attr('PK').begins_with('application-')
+            )
+            
+            authorizations = []
+            for item in response.get('Items', []):
+                # Extract application_id from PK
+                app_id = item['PK'].replace('application-', '')
+                
+                # Get application details
+                application = self.get_application(app_id)
+                
+                authorization_info = {
+                    "application_id": app_id,
+                    "application_name": application.get('name', app_id) if application else app_id,
+                    "application_description": application.get('description', '') if application else '',
+                    "created_at": item.get('created_at'),
+                    "status": "active"  # Simple schema assumes active if record exists
+                }
+                
+                authorizations.append(authorization_info)
+            
+            return authorizations
+            
+        except Exception as e:
+            print(f"Error getting user authorizations: {str(e)}")
+            return []
+    
+    def revoke_app_user_authorization(self, application_id, user_id):
+        """
+        Revoke user authorization for an application using the simple jambyref schema.
+        Simply deletes the application-user relationship record.
+        
+        Args:
+            application_id (str): The application ID
+            user_id (str): The user ID
+        """
+        try:
+            key = {
+                "PK": f"application-{application_id}",
+                "SK": user_id
+            }
+            
+            # Delete the authorization record
+            self.dynamodb_service.dynamodb.Table(self.dynamodb_service.main_table_name).delete_item(Key=key)
+            print(f"Revoked authorization for user {user_id} and application {application_id}")
+            
+        except Exception as e:
+            print(f"Error revoking authorization: {str(e)}")
+            raise

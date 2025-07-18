@@ -22,6 +22,11 @@ const router = createRouter({
       name: 'email-otp',
       component: () => import('@/pages/EmailOtpPage.vue')
     },
+    {
+      path: '/authorizations',
+      name: 'authorizations',
+      component: () => import('@/pages/AuthorizationsPage.vue')
+    },
   ],
 })
 

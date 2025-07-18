@@ -77,6 +77,16 @@
         </p>
       </div>
     </AuthCard>
+
+    <!-- Consent Screen Modal -->
+    <ConsentScreen
+      v-if="showConsentScreen"
+      :applicationId="appName"
+      :applicationName="appName"
+      @approved="handleConsentApproved"
+      @denied="handleConsentDenied"
+      @error="handleConsentError"
+    />
   </AuthBackground>
 </template>
 
@@ -91,6 +101,7 @@ import AuthBackground from '../components/ui/AuthBackground.vue'
 import AuthCard from '../components/ui/AuthCard.vue'
 import AuthInput from '../components/ui/AuthInput.vue'
 import AuthButton from '../components/ui/AuthButton.vue'
+import ConsentScreen from '../components/ConsentScreen.vue'
 import { useToast } from 'vue-toastification'
 
 // Form data
@@ -103,6 +114,8 @@ const formData = ref<LoginCredentials>({
 const loading = ref(false)
 const error = ref('')
 const errors = ref<Record<string, string>>({})
+const showConsentScreen = ref(false)
+const userTokens = ref<any>(null)
 
 // Route handling for URL parameters
 const route = useRoute()
@@ -151,7 +164,18 @@ const handleLogin = async () => {
       channelId: channelId.value
     })
 
-    // create session with sso backend
+    // check if user is authorized for this application
+    const authCheck = await api.checkAppUser(tokens.id_token, appName.value)
+    
+    if (!authCheck) {
+      // user needs to authorize this application - show consent screen
+      showConsentScreen.value = true
+      userTokens.value = tokens
+      loading.value = false
+      return
+    }
+
+    // user is already authorized - create session
     const sessionResponse = await api.initSession(tokens, appName.value)
 
     // Show success toast notification
@@ -173,6 +197,43 @@ const handleLogin = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// consent screen handlers
+const handleConsentApproved = async (scopes: string[]) => {
+  try {
+    loading.value = true
+    
+    // create session after consent is approved
+    const sessionResponse = await api.initSession(userTokens.value, appName.value)
+    
+    showConsentScreen.value = false
+    toast.success('Welcome to The Grind!')
+    
+    // redirect back to client app with session_id
+    if (sessionResponse) {
+      setTimeout(() => {
+        const redirectUrl = route.query.redirect_url as string || 'http://localhost:8080'
+        window.location.href = `${redirectUrl}?session_id=${sessionResponse.session_id}`
+      }, 1000)
+    } else {
+      throw new Error('failed to create session')
+    }
+  } catch (err: any) {
+    error.value = err.message || 'authorization failed'
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleConsentDenied = () => {
+  showConsentScreen.value = false
+  error.value = 'authorization required to access this application'
+}
+
+const handleConsentError = (errorMessage: string) => {
+  showConsentScreen.value = false
+  error.value = errorMessage
 }
 </script>
 

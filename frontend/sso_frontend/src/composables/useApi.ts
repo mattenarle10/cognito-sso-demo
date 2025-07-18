@@ -108,6 +108,52 @@ export function useApi() {
     }
   }
 
+  // get user's authorized applications
+  const getUserAuthorizations = async (): Promise<{ authorizations: any[]; total_count: number } | null> => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const idToken = localStorage.getItem('id_token')
+      if (!idToken) {
+        throw new Error('no authentication token found')
+      }
+
+      const response = await apiClient.get('/user-authorizations', {
+        headers: { Authorization: `Bearer ${idToken}` }
+      })
+      return response.data.data
+    } catch (err: any) {
+      error.value = err.response?.data?.message || 'failed to get authorizations'
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // revoke authorization for specific application
+  const revokeAuthorization = async (applicationId: string): Promise<boolean> => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const idToken = localStorage.getItem('id_token')
+      if (!idToken) {
+        throw new Error('no authentication token found')
+      }
+
+      await apiClient.delete(`/user-authorizations/${applicationId}`, {
+        headers: { Authorization: `Bearer ${idToken}` }
+      })
+      return true
+    } catch (err: any) {
+      error.value = err.response?.data?.message || 'failed to revoke authorization'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     loading,
     error,
@@ -115,6 +161,8 @@ export function useApi() {
     checkAppUser,
     initSession,
     getSession,
-    authorizeApplication
+    authorizeApplication,
+    getUserAuthorizations,
+    revokeAuthorization
   }
 } 
