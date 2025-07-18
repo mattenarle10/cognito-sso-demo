@@ -1,11 +1,37 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
+// Helper function to parse JWT tokens
+function parseJwt(token: string) {
+  try {
+    // Split the token and get the payload part (second part)
+    const base64Url = token.split('.')[1];
+    // Replace characters for correct base64 decoding
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    // Decode and parse as JSON
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+
+    const parsed = JSON.parse(jsonPayload);
+    console.log('Parsed JWT payload:', parsed);
+    return parsed;
+  } catch (e) {
+    console.error('Error parsing JWT token:', e);
+    return {};
+  }
+}
+
 // Define user type
 interface User {
   sub: string
   email: string
   name?: string
+  given_name?: string
+  family_name?: string
+  phone_number?: string
+  gender?: string
+  email_verified?: boolean
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -32,8 +58,23 @@ export const useAuthStore = defineStore('auth', () => {
       }
       isAuthenticated.value = true
       
-      // Could decode JWT to get user info
-      // For now we'll just set basic authenticated state
+      // Decode JWT to get user info
+      try {
+        const payload = parseJwt(storedIdToken)
+        user.value = {
+          sub: payload.sub,
+          email: payload.email,
+          name: payload.name,
+          given_name: payload.given_name,
+          family_name: payload.family_name,
+          phone_number: payload.phone_number,
+          gender: payload.gender,
+          email_verified: payload.email_verified
+        }
+        console.log('User info loaded from stored token:', user.value)
+      } catch (error) {
+        console.error('Failed to parse stored JWT token:', error)
+      }
     }
   }
   
@@ -52,6 +93,24 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.setItem('refresh_token', sessionTokens.refresh_token)
     }
     
+    // Parse the JWT token to get user information
+    try {
+      const payload = parseJwt(sessionTokens.id_token)
+      user.value = {
+        sub: payload.sub,
+        email: payload.email,
+        name: payload.name,
+        given_name: payload.given_name,
+        family_name: payload.family_name,
+        phone_number: payload.phone_number,
+        gender: payload.gender,
+        email_verified: payload.email_verified
+      }
+      console.log('User info extracted from token:', user.value)
+    } catch (error) {
+      console.error('Failed to parse JWT token:', error)
+    }
+    
     isAuthenticated.value = true
   }
   
@@ -65,6 +124,9 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('id_token')
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
+    
+    // Redirect to home page with signedout parameter
+    window.location.href = '/?signedout=true'
   }
   
   return {

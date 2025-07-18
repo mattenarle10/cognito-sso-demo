@@ -91,6 +91,7 @@ import AuthBackground from '../components/ui/AuthBackground.vue'
 import AuthCard from '../components/ui/AuthCard.vue'
 import AuthInput from '../components/ui/AuthInput.vue'
 import AuthButton from '../components/ui/AuthButton.vue'
+import { useToast } from 'vue-toastification'
 
 // Form data
 const formData = ref<LoginCredentials>({
@@ -107,6 +108,7 @@ const errors = ref<Record<string, string>>({})
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
+const toast = useToast()
 const appName = ref('')
 const channelId = ref('')
 
@@ -114,6 +116,11 @@ const channelId = ref('')
 onMounted(() => {
   appName.value = route.query.application_name as string || ''
   channelId.value = route.query.channel_id as string || ''
+  
+  // Check if user just verified their email
+  if (route.query.verified === 'true') {
+    toast.success('Email verified successfully! You can now log in.')
+  }
   
   // todo: validate app/channel with backend
   console.log('App:', appName.value, 'Channel:', channelId.value)
@@ -147,10 +154,16 @@ const handleLogin = async () => {
     // create session with sso backend
     const sessionResponse = await api.initSession(tokens, appName.value)
 
+    // Show success toast notification
+    toast.success('Login successful! Redirecting...')
+    
     // redirect back to client app with session_id
     if (sessionResponse) {
-      const redirectUrl = route.query.redirect_url as string || 'http://localhost:8080'
-      window.location.href = `${redirectUrl}?session_id=${sessionResponse.session_id}`
+      // Short delay to allow toast to be seen
+      setTimeout(() => {
+        const redirectUrl = route.query.redirect_url as string || 'http://localhost:8080'
+        window.location.href = `${redirectUrl}?session_id=${sessionResponse.session_id}`
+      }, 1000)
     } else {
       throw new Error('failed to create session')
     }

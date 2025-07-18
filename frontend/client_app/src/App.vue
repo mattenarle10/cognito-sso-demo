@@ -1,143 +1,199 @@
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
+import { RouterView, useRoute } from 'vue-router'
 import { useAuthStore } from './stores/authStore'
+import { redirectToLogin as loginRedirect } from './router'
+import UserDropdown from './components/UserDropdown.vue'
 
-// Initialize auth state from localStorage if present
+const route = useRoute()
 const authStore = useAuthStore()
+
+// Hide header on home page to avoid duplication with HomePage.vue's header
+const showHeader = computed(() => route.path !== '/')
+
+// Get user's display name with preference for given_name or first part of full name
+const getUserDisplayName = () => {
+  if (authStore.user?.given_name) {
+    return authStore.user.given_name
+  } else if (authStore.user?.name) {
+    return authStore.user.name.split(' ')[0]
+  } else {
+    return 'User'
+  }
+}
+
+// Initialize auth state on app mount
 onMounted(() => {
   authStore.initialize()
 })
+
+// Use the imported function with a different name
+const redirectToLogin = () => {
+  loginRedirect()
+}
 </script>
 
 <template>
   <div class="app-container">
-    <header class="navbar">
-      <div class="navbar-brand">
-        <h1>The Grind</h1>
-      </div>
-      <div class="navbar-menu">
-        <div v-if="authStore.isAuthenticated" class="auth-menu">
-          <router-link to="/orders" class="menu-link">My Orders</router-link>
-          <div class="user-dropdown">
-            <span class="username">My Account</span>
-            <div class="dropdown-content">
-              <button @click="authStore.logout()" class="logout-btn">Sign Out</button>
-            </div>
+    <!-- Only show header on non-home pages -->
+    <header v-if="showHeader" class="app-header">
+      <nav class="app-nav">
+        <div class="nav-brand">THE GRIND</div>
+        <div class="nav-links">
+          <router-link to="/" class="nav-link">Home</router-link>
+          <router-link to="/orders" class="nav-link">Orders</router-link>
+          <router-link to="/about" class="nav-link">About</router-link>
+        </div>
+        <div class="nav-auth">
+          <div v-if="authStore.isAuthenticated">
+            <UserDropdown :userName="getUserDisplayName()" />
+          </div>
+          <div v-else>
+            <button @click="redirectToLogin" class="sign-in-button">SIGN IN</button>
           </div>
         </div>
-        <div v-else class="guest-menu">
-          <button @click="redirectToLogin" class="login-btn">Sign In</button>
-        </div>
-      </div>
+      </nav>
     </header>
-
-    <main>
-      <RouterView />
-    </main>
+    
+    <!-- Router view for all pages -->
+    <RouterView />
   </div>
 </template>
 
-<script lang="ts">
-export default {
-  methods: {
-    redirectToLogin() {
-      const ssoUrl = import.meta.env.VITE_SSO_FRONTEND_URL
-      const appName = import.meta.env.VITE_APPLICATION_NAME
-      const channelId = import.meta.env.VITE_CHANNEL_ID
-      const redirectUrl = `${window.location.origin}`
-      
-      window.location.href = `${ssoUrl}/login?application_name=${appName}&channel_id=${channelId}&redirect_url=${redirectUrl}`
-    }
-  }
-}
-</script>
-
 <style>
-* {
-  box-sizing: border-box;
+/* Global styles */
+:root {
+  --primary-bg: #000000;
+  --secondary-bg: #1a1a1a;
+  --primary-text: rgba(255, 255, 255, 0.87);
+  --secondary-text: rgba(255, 255, 255, 0.6);
+  --accent-color: #646cff;
+  --border-color: rgba(255, 255, 255, 0.2);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--primary-bg);
+  color: var(--primary-text);
+  min-height: 100vh;
+}
+
+#app {
+  min-height: 100vh;
+  width: 100%;
   margin: 0;
   padding: 0;
 }
 
-body {
-  font-family: Arial, sans-serif;
-  line-height: 1.6;
-  color: #333;
+/* Reset default button styles */
+button {
+  cursor: pointer;
+  font-family: inherit;
 }
 
+/* Reset default link styles */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+</style>
+
+<style scoped>
+/* App container */
 .app-container {
-  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Header styles (only for non-home pages) */
+.app-header {
+  background-color: var(--secondary-bg);
+  padding: 1rem 2rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 20px;
-}
-
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 0;
-  border-bottom: 1px solid #eee;
-}
-
-.navbar-brand h1 {
-  font-size: 1.8rem;
-  color: #6b4226; /* Coffee brown */
-}
-
-.menu-link {
-  text-decoration: none;
-  color: #333;
-  margin-right: 20px;
-}
-
-.login-btn, .logout-btn {
-  background-color: #6b4226;
-  color: white;
-  border: none;
-  padding: 8px 15px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-
-.login-btn:hover, .logout-btn:hover {
-  background-color: #8c5a35;
-}
-
-.user-dropdown {
-  position: relative;
-  display: inline-block;
-}
-
-.username {
-  cursor: pointer;
-  padding: 8px;
-}
-
-.dropdown-content {
-  display: none;
-  position: absolute;
-  right: 0;
-  background-color: #f9f9f9;
-  min-width: 160px;
-  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-  z-index: 1;
-}
-
-.user-dropdown:hover .dropdown-content {
-  display: block;
-}
-
-.dropdown-content .logout-btn {
   width: 100%;
-  text-align: left;
-  padding: 12px 16px;
-  border-radius: 0;
 }
 
-main {
-  padding: 20px 0;
+.nav-brand {
+  font-size: 1.25rem;
+  font-weight: 300;
+  letter-spacing: 0.1em;
+}
+
+.nav-links {
+  display: flex;
+  gap: 2rem;
+}
+
+.nav-link {
+  font-weight: 300;
+  padding: 0.5rem 0;
+  position: relative;
+  transition: color 0.3s;
+}
+
+.nav-link:hover,
+.nav-link.router-link-active {
+  color: #fff;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background-color: #fff;
+  transition: width 0.3s;
+}
+
+.nav-link:hover::after,
+.nav-link.router-link-active::after {
+  width: 100%;
+}
+
+.sign-in-button {
+  background-color: transparent;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.2));
+  color: var(--primary-text, white);
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.sign-in-button:hover {
+  background-color: rgba(255, 255, 255, 1);
+  color: #000;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .app-nav {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .nav-links {
+    order: 2;
+  }
+  
+  .nav-auth {
+    order: 3;
+    margin-top: 1rem;
+  }
 }
 </style>

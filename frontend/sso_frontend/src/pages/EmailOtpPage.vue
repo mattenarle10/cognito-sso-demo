@@ -90,10 +90,12 @@ import AuthButton from '../components/ui/AuthButton.vue'
 import { ArrowRightIcon, RefreshCwIcon } from 'lucide-vue-next'
 import { useApi } from '../composables/useApi'
 import { cognitoService } from '../services/cognitoService'
+import { useToast } from 'vue-toastification'
 
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
+const toast = useToast()
 
 // reactive state
 const otpDigits = ref<string[]>(Array(6).fill(''))
@@ -218,10 +220,14 @@ const handleOtpVerification = async () => {
       channelId: channelId.value
     })
     
+    // Show success toast notification
+    toast.success("Email verified successfully!")
+    
     // after successful verification, redirect to login
     const loginQuery = {
       application_name: appName.value,
-      channel_id: channelId.value
+      channel_id: channelId.value,
+      verified: 'true' // Add flag to show welcome message on login page
     }
     
     router.push({
@@ -246,6 +252,9 @@ const resendOtp = async () => {
   try {
     // cognito resend confirmation code
     await cognitoService.resendConfirmationCode(email.value)
+    
+    // Show success toast
+    toast.info("Verification code resent to your email")
     
     // start cooldown timer
     resendCooldown.value = 30

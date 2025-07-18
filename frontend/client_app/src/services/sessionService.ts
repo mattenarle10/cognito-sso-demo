@@ -23,7 +23,18 @@ export class SessionService {
       })
       
       if (response.data && response.data.data) {
-        return response.data.data
+        console.log('Session data received:', response.data.data)
+        
+        // Extract tokens from the response structure
+        const { tokens } = response.data.data
+        
+        if (tokens && tokens.id_token && tokens.access_token) {
+          return {
+            id_token: tokens.id_token,
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token
+          }
+        }
       }
       
       console.error('Invalid response format from SSO API')
