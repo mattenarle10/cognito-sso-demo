@@ -1,91 +1,95 @@
 <template>
-  <div class="consent-overlay">
-    <div class="consent-modal">
-      <div class="consent-header">
-        <div class="app-info">
-          <div class="app-icon">
-            <i class="icon-app"></i>
+  <div class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+    <AuthCard>
+        <!-- Header -->
+        <div class="text-center mb-8">
+          <div class="w-16 h-16 bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/50 rounded-xl mx-auto mb-4 flex items-center justify-center shadow-inner">
+            <svg class="w-8 h-8 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+            </svg>
           </div>
-          <div class="app-details">
-            <h2>{{ applicationName }}</h2>
-            <p class="app-subtitle">wants to access your account</p>
+          
+          <h1 class="text-2xl font-bold tracking-tight mb-2">
+            <span class="bg-gradient-to-r from-gray-200 via-gray-100 to-gray-300 bg-clip-text text-transparent">
+              authorize access
+            </span>
+          </h1>
+          
+          <p class="text-zinc-400 text-sm">
+            allow <strong class="text-zinc-300">The Grind</strong> to access your grind account
+          </p>
+        </div>
+
+        <!-- Simple Permission Notice -->
+        <div class="bg-zinc-900/60 border border-zinc-700/60 rounded-lg p-6 mb-6">
+          <div class="flex items-start gap-4">
+            <div class="w-8 h-8 bg-blue-600/20 border border-blue-600/30 rounded-lg flex items-center justify-center mt-1">
+              <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="font-medium text-zinc-200 mb-2">Authorize App Access</h3>
+              <p class="text-zinc-400 text-sm leading-relaxed">
+                this allows access your profile, email, and account information to provide you with personalized service.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="consent-body">
-        <div class="permission-notice">
-          <p><strong>{{ applicationName }}</strong> is requesting permission to:</p>
+        <!-- Security Notice -->
+        <div class="bg-zinc-800/30 border border-zinc-700/50 rounded-lg p-4 mb-8">
+          <div class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+            </svg>
+            <p class="text-zinc-400 text-sm">
+              you can revoke this access anytime in your account settings
+            </p>
+          </div>
         </div>
 
-        <div class="permissions-list">
-          <div 
-            v-for="scope in availableScopes" 
-            :key="scope.id"
-            class="permission-item"
+        <!-- Error Display -->
+        <div v-if="error" class="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm mb-6">
+          {{ error }}
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-3">
+          <AuthButton
+            @click="denyConsent"
+            :disabled="loading"
+            class="flex-1 !bg-transparent !border-zinc-700 !text-zinc-400 hover:!text-zinc-300 hover:!bg-zinc-800/50"
           >
-            <label class="permission-checkbox">
-              <input 
-                type="checkbox" 
-                :value="scope.id"
-                v-model="selectedScopes"
-                :checked="scope.required"
-                :disabled="scope.required"
-              />
-              <span class="checkmark"></span>
-              <div class="permission-details">
-                <span class="permission-name">{{ scope.name }}</span>
-                <span class="permission-description">{{ scope.description }}</span>
-                <span v-if="scope.required" class="required-badge">Required</span>
-              </div>
-            </label>
-          </div>
+            cancel
+          </AuthButton>
+          
+          <AuthButton
+            @click="approveConsent"
+            :disabled="loading"
+            :loading="loading"
+            class="flex-1"
+          >
+            <span v-if="loading">authorizing...</span>
+            <span v-else">allow access</span>
+          </AuthButton>
         </div>
-
-        <div class="security-notice">
-          <div class="security-icon">
-            <i class="icon-shield"></i>
-          </div>
-          <div class="security-text">
-            <p>You can revoke these permissions at any time in your account settings.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="consent-footer">
-        <button 
-          class="btn btn-secondary" 
-          @click="denyConsent"
-          :disabled="loading"
-        >
-          Cancel
-        </button>
-        <button 
-          class="btn btn-primary" 
-          @click="approveConsent"
-          :disabled="loading || selectedScopes.length === 0"
-        >
-          <span v-if="loading">Processing...</span>
-          <span v-else>Allow Access</span>
-        </button>
-      </div>
-
-      <div v-if="error" class="error-message">
-        {{ error }}
-      </div>
-    </div>
-  </div>
+             </AuthCard>
+     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref } from 'vue'
 import { useApi } from '../composables/useApi'
+import AuthCard from './ui/AuthCard.vue'
+import AuthButton from './ui/AuthButton.vue'
 
 // Props
 interface Props {
   applicationId: string
   applicationName: string
   redirectUrl?: string
+  idToken?: string
 }
 
 const props = defineProps<Props>()
@@ -103,34 +107,6 @@ const api = useApi()
 // State
 const loading = ref(false)
 const error = ref('')
-const selectedScopes = ref<string[]>([])
-
-// Available scopes for the application
-const availableScopes = ref([
-  {
-    id: 'profile',
-    name: 'Basic profile information',
-    description: 'Access your name and profile picture',
-    required: true
-  },
-  {
-    id: 'email',
-    name: 'Email address',
-    description: 'Access your email address',
-    required: true
-  },
-  {
-    id: 'orders',
-    name: 'Order history',
-    description: 'Access your order history and preferences',
-    required: false
-  }
-])
-
-// Computed
-const requiredScopes = computed(() => 
-  availableScopes.value.filter(scope => scope.required).map(scope => scope.id)
-)
 
 // Methods
 const approveConsent = async () => {
@@ -138,22 +114,20 @@ const approveConsent = async () => {
   error.value = ''
 
   try {
-    // Include all required scopes plus selected optional ones
-    const scopesToGrant = [...new Set([...requiredScopes.value, ...selectedScopes.value])]
-    
+    // Simple authorization - just basic access
     const response = await api.authorizeApplication({
       application_id: props.applicationId,
-      granted_scopes: scopesToGrant,
+      granted_scopes: ['profile', 'email'],
       action: 'approve'
-    })
+    }, props.idToken)
 
     if (response && response.status === 'approved') {
-      emit('approved', scopesToGrant)
+      emit('approved', ['profile', 'email'])
     } else {
-      throw new Error('Authorization failed')
+      throw new Error('authorization failed')
     }
   } catch (err: any) {
-    error.value = err.message || 'Failed to authorize application'
+    error.value = err.message || 'failed to authorize application'
     emit('error', error.value)
   } finally {
     loading.value = false
@@ -179,250 +153,6 @@ const denyConsent = async () => {
     loading.value = false
   }
 }
-
-// Initialize selected scopes with required ones
-onMounted(() => {
-  selectedScopes.value = [...requiredScopes.value]
-})
 </script>
 
-<style scoped>
-.consent-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.consent-modal {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  max-width: 480px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.consent-header {
-  padding: 24px 24px 16px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.app-info {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.app-icon {
-  width: 48px;
-  height: 48px;
-  background: #3b82f6;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 24px;
-}
-
-.app-details h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.app-subtitle {
-  margin: 4px 0 0;
-  color: #6b7280;
-  font-size: 14px;
-}
-
-.consent-body {
-  padding: 24px;
-}
-
-.permission-notice {
-  margin-bottom: 24px;
-}
-
-.permission-notice p {
-  margin: 0;
-  color: #374151;
-  font-size: 16px;
-}
-
-.permissions-list {
-  margin-bottom: 24px;
-}
-
-.permission-item {
-  margin-bottom: 16px;
-}
-
-.permission-checkbox {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  cursor: pointer;
-  padding: 12px;
-  border-radius: 8px;
-  transition: background-color 0.2s;
-}
-
-.permission-checkbox:hover {
-  background: #f9fafb;
-}
-
-.permission-checkbox input[type="checkbox"] {
-  display: none;
-}
-
-.checkmark {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #d1d5db;
-  border-radius: 4px;
-  position: relative;
-  flex-shrink: 0;
-  margin-top: 2px;
-  transition: all 0.2s;
-}
-
-.permission-checkbox input:checked + .checkmark {
-  background: #3b82f6;
-  border-color: #3b82f6;
-}
-
-.permission-checkbox input:checked + .checkmark::after {
-  content: '✓';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: white;
-  font-size: 12px;
-  font-weight: bold;
-}
-
-.permission-checkbox input:disabled + .checkmark {
-  background: #3b82f6;
-  border-color: #3b82f6;
-  opacity: 0.7;
-}
-
-.permission-details {
-  flex: 1;
-}
-
-.permission-name {
-  display: block;
-  font-weight: 500;
-  color: #111827;
-  margin-bottom: 4px;
-}
-
-.permission-description {
-  display: block;
-  font-size: 14px;
-  color: #6b7280;
-  margin-bottom: 4px;
-}
-
-.required-badge {
-  display: inline-block;
-  background: #fef3c7;
-  color: #92400e;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 12px;
-}
-
-.security-notice {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  background: #f0f9ff;
-  border: 1px solid #e0f2fe;
-  border-radius: 8px;
-}
-
-.security-icon {
-  color: #0369a1;
-  font-size: 20px;
-}
-
-.security-text p {
-  margin: 0;
-  font-size: 14px;
-  color: #0369a1;
-}
-
-.consent-footer {
-  padding: 16px 24px 24px;
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-}
-
-.btn {
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: #e5e7eb;
-}
-
-.btn-primary {
-  background: #3b82f6;
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #2563eb;
-}
-
-.error-message {
-  margin: 16px 24px 0;
-  padding: 12px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 8px;
-  color: #dc2626;
-  font-size: 14px;
-}
-
-.icon-app::before {
-  content: '📱';
-}
-
-.icon-shield::before {
-  content: '🛡️';
-}
-</style> 
+ 

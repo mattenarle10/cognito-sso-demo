@@ -40,13 +40,13 @@
         <div 
           v-for="auth in authorizations" 
           :key="auth.application_id"
-          class="bg-zinc-800/30 border border-zinc-700/50 rounded-lg p-6 hover:bg-zinc-800/50 transition-colors"
+          class="bg-zinc-900/60 border border-zinc-700/60 rounded-lg p-6 hover:bg-zinc-800/60 transition-all duration-200 shadow-sm hover:shadow-md"
         >
           <div class="flex items-start justify-between">
             <div class="flex-1">
               <div class="flex items-center gap-3 mb-2">
-                <div class="w-10 h-10 bg-gradient-to-br from-zinc-700 to-zinc-800 rounded-lg flex items-center justify-center">
-                  <svg class="w-5 h-5 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-12 h-12 bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/50 rounded-xl flex items-center justify-center shadow-inner">
+                  <svg class="w-6 h-6 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                   </svg>
                 </div>
@@ -65,57 +65,63 @@
               </div>
             </div>
 
-            <button
+            <AuthButton
               @click="handleRevoke(auth.application_id, auth.application_name)"
               :disabled="revokingId === auth.application_id"
-              class="px-4 py-2 text-sm bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-600/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              :loading="revokingId === auth.application_id"
+              class="!bg-red-600/20 hover:!bg-red-600/30 !text-red-400 !border-red-600/30 !px-4 !py-2 !text-sm"
             >
               <span v-if="revokingId === auth.application_id">revoking...</span>
               <span v-else>revoke access</span>
-            </button>
+            </AuthButton>
           </div>
         </div>
       </div>
 
       <!-- Back Button -->
       <div class="mt-8 pt-6 border-t border-zinc-800/50">
-        <button 
+        <AuthButton 
           @click="goBack"
-          class="text-zinc-400 hover:text-zinc-300 text-sm transition-colors flex items-center gap-2"
+          class="!bg-transparent !border-zinc-700 !text-zinc-400 hover:!text-zinc-300 hover:!bg-zinc-800/50 !text-sm !px-4 !py-2"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
           </svg>
           back to profile
-        </button>
+        </AuthButton>
       </div>
     </AuthCard>
 
     <!-- Confirmation Dialog -->
-    <div v-if="showConfirmDialog" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div class="bg-zinc-900 border border-zinc-700 rounded-lg p-6 max-w-md w-full mx-4">
-        <h3 class="text-lg font-medium text-zinc-200 mb-2">revoke authorization?</h3>
-        <p class="text-zinc-400 text-sm mb-6">
-          this will remove <strong>{{ appToRevoke?.name }}</strong> access to your account. 
+    <div v-if="showConfirmDialog" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+      <div class="bg-zinc-900/95 border border-zinc-700/60 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+        <h3 class="text-xl font-bold tracking-tight text-zinc-200 mb-3">
+          <span class="bg-gradient-to-r from-gray-200 via-gray-100 to-gray-300 bg-clip-text text-transparent">
+            revoke authorization?
+          </span>
+        </h3>
+        <p class="text-zinc-400 text-sm mb-6 leading-relaxed">
+          this will remove <strong class="text-zinc-300">{{ appToRevoke?.name }}</strong> access to your account. 
           you'll need to re-authorize if you want to use this app again.
         </p>
         
         <div class="flex gap-3">
-          <button
+          <AuthButton
             @click="confirmRevoke"
             :disabled="loading"
-            class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+            :loading="loading"
+            class="flex-1 !bg-red-600 hover:!bg-red-700 !text-white !py-2 !px-4"
           >
             <span v-if="loading">revoking...</span>
             <span v-else>revoke access</span>
-          </button>
-          <button
+          </AuthButton>
+          <AuthButton
             @click="cancelRevoke"
             :disabled="loading"
-            class="flex-1 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+            class="flex-1 !bg-zinc-700 hover:!bg-zinc-600 !text-zinc-300 !py-2 !px-4"
           >
             cancel
-          </button>
+          </AuthButton>
         </div>
       </div>
     </div>
@@ -129,6 +135,7 @@ import { useApi } from '../composables/useApi'
 import { useToast } from 'vue-toastification'
 import AuthBackground from '../components/ui/AuthBackground.vue'
 import AuthCard from '../components/ui/AuthCard.vue'
+import AuthButton from '../components/ui/AuthButton.vue'
 
 // composables
 const router = useRouter()

@@ -83,6 +83,7 @@
       v-if="showConsentScreen"
       :applicationId="appName"
       :applicationName="appName"
+      :idToken="userTokens?.id_token"
       @approved="handleConsentApproved"
       @denied="handleConsentDenied"
       @error="handleConsentError"
@@ -203,11 +204,15 @@ const handleLogin = async () => {
 const handleConsentApproved = async (scopes: string[]) => {
   try {
     loading.value = true
+    showConsentScreen.value = false
     
-    // create session after consent is approved
+    // small delay to ensure authorization record is fully created
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    // authorization was already created by the consent screen
+    // now create session with the authorized user
     const sessionResponse = await api.initSession(userTokens.value, appName.value)
     
-    showConsentScreen.value = false
     toast.success('Welcome to The Grind!')
     
     // redirect back to client app with session_id

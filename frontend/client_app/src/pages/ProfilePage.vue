@@ -69,7 +69,7 @@
         </div>
         
         <div class="actions">
-          <button @click="redirectToLogin" class="manage-profile-btn">MANAGE PROFILE</button>
+          <button @click="redirectToLogin" class="manage-profile-btn">MANAGE ACCOUNT</button>
           <button @click="signOut" class="sign-out-btn">SIGN OUT</button>
         </div>
       </div>
