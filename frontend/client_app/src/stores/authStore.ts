@@ -14,7 +14,6 @@ function parseJwt(token: string) {
     }).join(''));
 
     const parsed = JSON.parse(jsonPayload);
-    console.log('Parsed JWT payload:', parsed);
     return parsed;
   } catch (e) {
     console.error('Error parsing JWT token:', e);
@@ -71,7 +70,7 @@ export const useAuthStore = defineStore('auth', () => {
           gender: payload.gender,
           email_verified: payload.email_verified
         }
-        console.log('User info loaded from stored token:', user.value)
+        // User info loaded from stored token
       } catch (error) {
         console.error('Failed to parse stored JWT token:', error)
       }
@@ -106,7 +105,7 @@ export const useAuthStore = defineStore('auth', () => {
         gender: payload.gender,
         email_verified: payload.email_verified
       }
-      console.log('User info extracted from token:', user.value)
+      // User info extracted from token
     } catch (error) {
       console.error('Failed to parse JWT token:', error)
     }

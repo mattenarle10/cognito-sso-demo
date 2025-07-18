@@ -39,12 +39,12 @@
           <div class="profile-details">
             <div class="detail-row">
               <div class="detail-label">First Name</div>
-              <div class="detail-value">{{ authStore.user?.given_name || '-' }}</div>
+              <div class="detail-value">{{ firstName }}</div>
             </div>
             
             <div class="detail-row">
               <div class="detail-label">Last Name</div>
-              <div class="detail-value">{{ authStore.user?.family_name || '-' }}</div>
+              <div class="detail-value">{{ lastName }}</div>
             </div>
             
             <div class="detail-row">
@@ -79,15 +79,14 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useAuthStore } from '../stores/authStore'
 import { useRouter } from 'vue-router'
-import { redirectToLogin } from '../router'
+import { useAuthStore } from '../stores/authStore'
 import UserDropdown from '../components/UserDropdown.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
-// Calculate initials from user's name
+// Computed property to get user initials
 const initials = computed(() => {
   const name = authStore.user?.name || ''
   if (!name) return 'U'
@@ -97,51 +96,62 @@ const initials = computed(() => {
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
 })
 
-// Get user's display name with preference for given_name or first part of full name
-const getUserDisplayName = () => {
-  if (authStore.user?.given_name) {
-    return authStore.user.given_name
-  } else if (authStore.user?.name) {
-    return authStore.user.name.split(' ')[0]
-  } else {
-    return 'User'
+// Computed properties to get first and last name from full name if needed
+const firstName = computed(() => {
+  if (authStore.user?.given_name) return authStore.user.given_name
+  if (authStore.user?.name) {
+    const parts = authStore.user.name.split(' ')
+    return parts[0] || '-'
   }
-}
+  return '-'
+})
 
-// Generate random positions for animated dots
-function getRandomDotStyle(index: number) {
-  const positions = [
-    { top: '25%', left: '15%', size: '12px', delay: '0s', duration: '8s' },
-    { top: '65%', left: '80%', size: '8px', delay: '0.5s', duration: '10s' },
-    { top: '35%', right: '20%', size: '15px', delay: '1s', duration: '9s' },
-    { top: '75%', left: '30%', size: '10px', delay: '1.5s', duration: '7s' },
-    { top: '15%', right: '15%', size: '14px', delay: '2s', duration: '11s' },
-    { top: '45%', left: '10%', size: '9px', delay: '2.5s', duration: '9s' },
-    { top: '85%', right: '25%', size: '11px', delay: '3s', duration: '10s' },
-    { top: '55%', left: '70%', size: '13px', delay: '3.5s', duration: '8s' },
-  ]
-  
-  const pos = positions[index % positions.length]
-  return {
-    ...pos,
-    width: pos.size,
-    height: pos.size,
-    animationDelay: pos.delay,
-    animationDuration: pos.duration,
-    opacity: (Math.random() * 0.3 + 0.1).toString()
+const lastName = computed(() => {
+  if (authStore.user?.family_name) return authStore.user.family_name
+  if (authStore.user?.name) {
+    const parts = authStore.user.name.split(' ')
+    return parts.length > 1 ? parts[parts.length - 1] : '-'
   }
+  return '-'
+})
+
+// Function to get user display name
+function getUserDisplayName(): string {
+  return authStore.user?.name || 'User'
 }
 
-// Helper function to capitalize first letter
-function capitalizeFirstLetter(string?: string) {
-  if (!string) return null
-  return string.charAt(0).toUpperCase() + string.slice(1)
+// Function to capitalize first letter
+function capitalizeFirstLetter(str?: string): string {
+  if (!str) return ''
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
 }
 
-// Sign out function
+// Function to sign out
 function signOut() {
   authStore.logout()
-  router.push('/')
+}
+
+// Function to redirect to login page
+function redirectToLogin() {
+  window.location.href = import.meta.env.VITE_SSO_FRONTEND_URL + '/profile'
+}
+
+// Generate random dot styles for background animation
+function getRandomDotStyle(_: number) {
+  const size = Math.floor(Math.random() * 6) + 2 + 'px'
+  const animationDuration = (Math.random() * 50) + 50 + 's'
+  const initialTop = Math.floor(Math.random() * 100) + '%'
+  const initialLeft = Math.floor(Math.random() * 100) + '%'
+  const delay = (Math.random() * 40) + 's'
+  
+  return {
+    width: size,
+    height: size,
+    top: initialTop,
+    left: initialLeft,
+    animationDuration,
+    animationDelay: delay
+  }
 }
 </script>
 

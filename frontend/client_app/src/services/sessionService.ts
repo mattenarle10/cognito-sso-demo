@@ -23,7 +23,7 @@ export class SessionService {
       })
       
       if (response.data && response.data.data) {
-        console.log('Session data received:', response.data.data)
+        // Session data received
         
         // Extract tokens from the response structure
         const { tokens } = response.data.data
