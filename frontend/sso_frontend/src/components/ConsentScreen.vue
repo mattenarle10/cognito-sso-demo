@@ -14,7 +14,7 @@
               authorize access
             </span>
           </h1>
-          
+
           <p class="text-zinc-400 text-sm">
             allow <strong class="text-zinc-300">The Grind</strong> to access your grind account
           </p>
@@ -33,7 +33,7 @@
               <p class="text-zinc-400 text-sm leading-relaxed">
                 this allows access your profile, email, and account information to provide you with personalized service.
               </p>
-            </div>
+              </div>
           </div>
         </div>
 
@@ -52,30 +52,30 @@
         <!-- Error Display -->
         <div v-if="error" class="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm mb-6">
           {{ error }}
-        </div>
+      </div>
 
         <!-- Action Buttons -->
         <div class="flex gap-3">
           <AuthButton
-            @click="denyConsent"
-            :disabled="loading"
+          @click="denyConsent"
+          :disabled="loading"
             class="flex-1 !bg-transparent !border-zinc-700 !text-zinc-400 hover:!text-zinc-300 hover:!bg-zinc-800/50"
           >
             cancel
           </AuthButton>
           
           <AuthButton
-            @click="approveConsent"
+          @click="approveConsent"
             :disabled="loading"
             :loading="loading"
             class="flex-1"
-          >
+        >
             <span v-if="loading">authorizing...</span>
             <span v-else">allow access</span>
           </AuthButton>
-        </div>
+      </div>
              </AuthCard>
-     </div>
+  </div>
 </template>
 
 <script setup lang="ts">

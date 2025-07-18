@@ -37,6 +37,14 @@ functions:
           path: /orders
           method: get
 
+  createOrder:
+    handler: app.handlers.http.create_order.handler
+    description: "Create a new order for authenticated user"
+    events:
+      - httpApi:
+          path: /orders
+          method: post
+
 plugins:
   - serverless-python-requirements
 

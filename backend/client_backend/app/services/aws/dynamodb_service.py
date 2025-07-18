@@ -1,5 +1,6 @@
 import os
 import boto3
+from decimal import Decimal
 
 class DynamoDBService:
     """
@@ -34,6 +35,32 @@ class DynamoDBService:
             print(f"error querying orders for user {user_id}: {str(e)}")
             return []
     
+    def put_order(self, order_item):
+        """
+        create a new order in orders table
+        
+        args:
+            order_item (dict): order data with all required fields
+            
+        returns:
+            bool: true if successful, false otherwise
+        """
+        try:
+            # convert price fields to decimal for dynamodb
+            if 'price_per_item' in order_item:
+                order_item['price_per_item'] = Decimal(str(order_item['price_per_item']))
+            if 'total_price' in order_item:
+                order_item['total_price'] = Decimal(str(order_item['total_price']))
+            
+            # save to orders table
+            self.orders_table.put_item(Item=order_item)
+            print(f"successfully created order {order_item.get('order_id')}")
+            return True
+            
+        except Exception as e:
+            print(f"error creating order: {str(e)}")
+            return False
+
     def scan_users_by_sub(self, cognito_sub):
         """
         find user by cognito sub in main table
