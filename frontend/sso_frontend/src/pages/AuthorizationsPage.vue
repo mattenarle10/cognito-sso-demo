@@ -130,7 +130,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useToast } from 'vue-toastification'
 import AuthBackground from '../components/ui/AuthBackground.vue'
@@ -139,6 +139,7 @@ import AuthButton from '../components/ui/AuthButton.vue'
 
 // composables
 const router = useRouter()
+const route = useRoute()
 const api = useApi()
 const toast = useToast()
 
@@ -149,6 +150,7 @@ const error = ref('')
 const revokingId = ref<string | null>(null)
 const showConfirmDialog = ref(false)
 const appToRevoke = ref<{ id: string; name: string } | null>(null)
+const currentTokens = ref<any>(null)
 
 // load user authorizations
 const loadAuthorizations = async () => {
@@ -156,7 +158,25 @@ const loadAuthorizations = async () => {
   error.value = ''
   
   try {
-    const result = await api.getUserAuthorizations()
+    // check if we have session_id in url params
+    const sessionId = route.query.session_id as string
+    
+    if (sessionId) {
+      // get session and tokens from sso backend
+      const sessionData = await api.getSession(sessionId)
+      if (sessionData && sessionData.tokens) {
+        currentTokens.value = sessionData.tokens
+      } else {
+        error.value = 'failed to get session data - please try logging in again'
+        return
+      }
+    } else {
+      error.value = 'no session found - please access through your application'
+      return
+    }
+    
+    // get user authorizations with proper tokens
+    const result = await api.getUserAuthorizations(currentTokens.value?.id_token)
     if (result) {
       authorizations.value = result.authorizations
     } else {
@@ -183,7 +203,7 @@ const confirmRevoke = async () => {
   revokingId.value = appToRevoke.value.id
   
   try {
-    const success = await api.revokeAuthorization(appToRevoke.value.id)
+    const success = await api.revokeAuthorization(appToRevoke.value.id, currentTokens.value?.id_token)
     
     if (success) {
       // remove from local list

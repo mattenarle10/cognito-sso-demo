@@ -16,9 +16,16 @@ export interface SessionResponse {
 }
 
 export interface TokenResponse {
-  id_token: string
-  access_token: string
-  refresh_token: string
-  token_type: string
-  expires_in: number
+  session_id: string
+  user_id: string
+  application_id: string
+  tokens: {
+    id_token: string
+    access_token: string
+    refresh_token: string
+    token_type: string
+    expires_in: number
+  }
+  expires_at: string
+  created_at: string
 } 

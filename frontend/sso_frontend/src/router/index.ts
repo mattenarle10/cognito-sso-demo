@@ -27,6 +27,11 @@ const router = createRouter({
       name: 'authorizations',
       component: () => import('@/pages/AuthorizationsPage.vue')
     },
+    {
+      path: '/manage-account',
+      name: 'manage-account',
+      component: () => import('@/pages/ManageAccountPage.vue')
+    },
   ],
 })
 

@@ -46,6 +46,36 @@ export class SessionService {
   }
   
   /**
+   * Create a session in SSO backend with current tokens
+   * 
+   * @param tokens - Token set containing id_token, access_token, etc.
+   * @param applicationId - The application ID requesting the session
+   * @returns Session ID or null if creation fails
+   */
+  async createSession(tokens: TokenResponse, applicationId: string): Promise<string | null> {
+    try {
+      const response = await axios.post(`${SSO_API_URL}/init-session`, {
+        tokens: {
+          id_token: tokens.id_token,
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token
+        },
+        application_id: applicationId
+      })
+      
+      if (response.data && response.data.data && response.data.data.session_id) {
+        return response.data.data.session_id
+      }
+      
+      console.error('Invalid response format from SSO API when creating session')
+      return null
+    } catch (error) {
+      console.error('Failed to create session:', error)
+      return null
+    }
+  }
+
+  /**
    * Check if the current tokens are valid (not expired)
    * This is a simple check based on localStorage presence
    * In a production app, you would verify the expiration time

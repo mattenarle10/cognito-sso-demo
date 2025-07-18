@@ -82,6 +82,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import UserDropdown from '../components/UserDropdown.vue'
+import { sessionService } from '../services/sessionService'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -131,9 +132,31 @@ function signOut() {
   authStore.logout()
 }
 
-// Function to redirect to login page
-function redirectToLogin() {
-  window.location.href = import.meta.env.VITE_SSO_FRONTEND_URL + '/profile'
+// Function to redirect to manage account page
+async function redirectToLogin() {
+  try {
+    // ensure user is authenticated and has tokens
+    if (!authStore.isAuthenticated || !authStore.tokens) {
+      console.error('user not authenticated or missing tokens')
+      return
+    }
+
+    // get application id from environment
+    const applicationId = import.meta.env.VITE_DEFAULT_APPLICATION_NAME || 'thegrind'
+    
+    // create session in sso backend with current tokens
+    const sessionId = await sessionService.createSession(authStore.tokens, applicationId)
+    
+    if (!sessionId) {
+      console.error('failed to create session for manage account redirect')
+      return
+    }
+
+    // open sso frontend in new tab with session_id
+    window.open(`${import.meta.env.VITE_SSO_FRONTEND_URL}/manage-account?session_id=${sessionId}`, '_blank')
+  } catch (error) {
+    console.error('error redirecting to manage account:', error)
+  }
 }
 
 // Generate random dot styles for background animation

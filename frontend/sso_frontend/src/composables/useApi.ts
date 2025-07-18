@@ -112,18 +112,18 @@ export function useApi() {
   }
 
   // get user's authorized applications
-  const getUserAuthorizations = async (): Promise<{ authorizations: any[]; total_count: number } | null> => {
+  const getUserAuthorizations = async (idToken?: string): Promise<{ authorizations: any[]; total_count: number } | null> => {
     loading.value = true
     error.value = null
     
     try {
-      const idToken = localStorage.getItem('id_token')
-      if (!idToken) {
+      const token = idToken || localStorage.getItem('id_token') || localStorage.getItem('temp_id_token')
+      if (!token) {
         throw new Error('no authentication token found')
       }
 
       const response = await apiClient.get('/user-authorizations', {
-        headers: { Authorization: `Bearer ${idToken}` }
+        headers: { Authorization: `Bearer ${token}` }
       })
       return response.data.data
     } catch (err: any) {
@@ -135,18 +135,18 @@ export function useApi() {
   }
 
   // revoke authorization for specific application
-  const revokeAuthorization = async (applicationId: string): Promise<boolean> => {
+  const revokeAuthorization = async (applicationId: string, idToken?: string): Promise<boolean> => {
     loading.value = true
     error.value = null
     
     try {
-      const idToken = localStorage.getItem('id_token')
-      if (!idToken) {
+      const token = idToken || localStorage.getItem('id_token') || localStorage.getItem('temp_id_token')
+      if (!token) {
         throw new Error('no authentication token found')
       }
 
       await apiClient.delete(`/user-authorizations/${applicationId}`, {
-        headers: { Authorization: `Bearer ${idToken}` }
+        headers: { Authorization: `Bearer ${token}` }
       })
       return true
     } catch (err: any) {
