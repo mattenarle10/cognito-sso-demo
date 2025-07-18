@@ -25,4 +25,31 @@ const router = createRouter({
   ],
 })
 
+// Add default query parameters for development mode
+router.beforeEach((to, from, next) => {
+  // Only apply this to login and register routes
+  if ((to.name === 'login' || to.name === 'register') && import.meta.env.DEV) {
+    // Check if the URL already has the required parameters
+    const hasAppName = to.query.application_name !== undefined
+    const hasChannelId = to.query.channel_id !== undefined
+    const hasRedirectUrl = to.query.redirect_url !== undefined
+    
+    // If any parameter is missing, add all default parameters
+    if (!hasAppName || !hasChannelId || !hasRedirectUrl) {
+      next({
+        name: to.name,
+        query: {
+          ...to.query,
+          application_name: import.meta.env.VITE_DEFAULT_APPLICATION_NAME,
+          channel_id: import.meta.env.VITE_DEFAULT_CHANNEL_ID,
+          redirect_url: import.meta.env.VITE_DEFAULT_REDIRECT_URL
+        }
+      })
+      return
+    }
+  }
+  
+  next()
+})
+
 export default router
