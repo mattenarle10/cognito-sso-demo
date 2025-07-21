@@ -232,6 +232,8 @@ export function useApi() {
     }
   }
 
+  // Note: We're using getUserAuthorizations to get application details instead of a separate endpoint
+
   return {
     loading,
     error,

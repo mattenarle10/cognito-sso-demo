@@ -30,6 +30,17 @@ export interface TokenResponse {
   created_at: string
 } 
 
+export interface ApplicationDetails {
+  application_id: string
+  application_name: string
+  application_description?: string
+  channels?: Array<{
+    channel_id: string
+    return_url: string
+  }>
+  created_at?: string
+}
+
 export interface UserSession {
   session_id: string
   user_id: string
@@ -41,7 +52,6 @@ export interface UserSession {
     browser?: string
     os?: string
     device?: string
-    ip_address?: string
   }
   is_current?: boolean
   created_at?: string

@@ -59,10 +59,11 @@
                   </svg>
                 </div>
                 <div>
-                  <h3 class="font-medium text-zinc-200 flex items-center gap-2">
-                    {{ session.application_name || 'Unknown Application' }}
-                    <span v-if="session.is_current" class="bg-green-500/20 text-green-400 text-xs px-2 py-0.5 rounded-full">current</span>
-                  </h3>
+                  <div class="session-app">
+                      <p class="text-m text-zinc-400">
+                    {{ session.application_name || session.application_id || 'Unknown Application' }}
+                </p>
+                  </div>
                   <p class="text-sm text-zinc-400">
                     {{ formatDeviceInfo(session) }}
                   </p>
@@ -85,12 +86,7 @@
                   </svg>
                   expires: {{ formatDate(session.expires_at) }}
                 </span>
-                <span v-if="session.device_info?.ip_address" class="flex items-center gap-1">
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
-                  </svg>
-                  ip: {{ session.device_info.ip_address }}
-                </span>
+                
                 <span v-if="session.session_id" class="flex items-center gap-1">
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
@@ -142,7 +138,6 @@
         <p class="text-zinc-400 mb-6">
           Are you sure you want to revoke this session? This will immediately log out the device associated with this session.
         </p>
-        
         <div class="flex gap-3">
           <AuthButton
             @click="confirmRevoke"
@@ -190,6 +185,43 @@ const revokingId = ref<string | null>(null)
 const showConfirmDialog = ref(false)
 const sessionToRevoke = ref<string | null>(null)
 const currentTokens = ref<any>(null)
+const applicationMap = ref<{[key: string]: { name: string, description?: string }}>({})
+
+// Load application details from user authorizations
+const loadApplicationDetails = async () => {
+  try {
+    // Get user authorizations which contain application details
+    const result = await api.getUserAuthorizations(currentTokens.value?.id_token)
+    if (result && result.authorizations) {
+      // Create a map of application_id to application details
+      result.authorizations.forEach(auth => {
+        if (auth.application_id) {
+          applicationMap.value[auth.application_id] = {
+            name: auth.application_name || 'Unknown Application',
+            description: auth.application_description
+          }
+        }
+      })
+      console.log('Application map created:', applicationMap.value)
+    }
+  } catch (err) {
+    console.error('Error loading application details:', err)
+    // Continue even if we can't load application details
+  }
+}
+
+// Enrich sessions with application names
+const enrichSessionsWithAppNames = (sessions: UserSession[]): UserSession[] => {
+  return sessions.map(session => {
+    if (session.application_id && applicationMap.value[session.application_id]) {
+      return {
+        ...session,
+        application_name: applicationMap.value[session.application_id].name
+      }
+    }
+    return session
+  })
+}
 
 // load user sessions
 const loadSessions = async () => {
@@ -214,27 +246,34 @@ const loadSessions = async () => {
       return
     }
     
-    // get user sessions with proper tokens
+    // First load application details to get names
+    await loadApplicationDetails()
+    
+    // Then get user sessions with proper tokens
     const result = await api.getUserSessions(currentTokens.value?.id_token)
     if (result) {
       console.log('Session data from API:', result)
       
       // Update to handle the new response format
-      activeSessions.value = result.sessions.active || []
-      expiredSessions.value = result.sessions.expired || []
-      
-      console.log('Active sessions:', activeSessions.value)
+      let active = result.sessions.active || []
+      let expired = result.sessions.expired || []
       
       // Mark current session
       const currentSessionId = route.query.session_id as string
       if (currentSessionId) {
-        activeSessions.value = activeSessions.value.map(session => {
+        active = active.map(session => {
           if (session.session_id === currentSessionId) {
             return { ...session, is_current: true }
           }
           return session
         })
       }
+      
+      // Enrich sessions with application names
+      activeSessions.value = enrichSessionsWithAppNames(active)
+      expiredSessions.value = enrichSessionsWithAppNames(expired)
+      
+      console.log('Enriched active sessions:', activeSessions.value)
     } else {
       error.value = api.error.value || 'failed to load sessions'
     }
