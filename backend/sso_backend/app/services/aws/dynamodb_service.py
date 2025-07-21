@@ -88,3 +88,30 @@ class DynamoDBService:
             
         response = self.main_table.query(**query_params)
         return response.get('Items', [])
+    
+    def query_index(self, params):
+        """
+        Query items from a GSI.
+        
+        Args:
+            params (dict): Query parameters including IndexName and KeyConditionExpression
+            
+        Returns:
+            dict: The response from DynamoDB including Items
+        """
+        # Make sure we're using the main table
+        response = self.main_table.query(**params)
+        return response
+        
+    def scan(self, params):
+        """
+        Scan the main table with optional filters.
+        
+        Args:
+            params (dict): Scan parameters including FilterExpression and ExpressionAttributeValues
+            
+        Returns:
+            list: The items from DynamoDB
+        """
+        response = self.main_table.scan(**params)
+        return response.get('Items', [])

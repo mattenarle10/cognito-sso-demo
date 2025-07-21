@@ -41,6 +41,11 @@ provider:
 
 functions:
   # Cognito Triggers
+  preSignUp:
+    handler: app.handlers.triggers.pre_signup.handler
+    description: "Triggered before user signs up to handle social login and duplicate checks"
+    environment: ${self:provider.environment}
+    
   postConfirmation:
     handler: app.handlers.triggers.post_confirmation.handler
     description: "Triggered after user confirms registration in Cognito"
@@ -138,3 +143,58 @@ plugins:
 custom:
   pythonRequirements:
     dockerizePip: false
+
+resources:
+  Resources:
+    MainTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.MAIN_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+          - AttributeName: GSI1-PK
+            AttributeType: S
+          - AttributeName: GSI1-SK
+            AttributeType: S
+          - AttributeName: GSI2-PK
+            AttributeType: S
+          - AttributeName: GSI2-SK
+            AttributeType: S
+          - AttributeName: GSI3-PK
+            AttributeType: S
+          - AttributeName: GSI3-SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: GSI1
+            KeySchema:
+              - AttributeName: GSI1-PK
+                KeyType: HASH
+              - AttributeName: GSI1-SK
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: GSI2
+            KeySchema:
+              - AttributeName: GSI2-PK
+                KeyType: HASH
+              - AttributeName: GSI2-SK
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: GSI3
+            KeySchema:
+              - AttributeName: GSI3-PK
+                KeyType: HASH
+              - AttributeName: GSI3-SK
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL

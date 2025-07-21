@@ -10,6 +10,7 @@ class SessionRepository:
     def __init__(self, dynamodb_service):
         """initialize with dynamodb service"""
         self.dynamodb_service = dynamodb_service
+        self.table_name = dynamodb_service.main_table_name
     
     def create_session(self, user_id, cognito_tokens, application_id, device_info=None):
         """
@@ -31,7 +32,7 @@ class SessionRepository:
         expires_at = (datetime.now() + timedelta(hours=24)).isoformat()
         timestamp = datetime.now().isoformat()
         
-        # create session record
+        # create session record with GSI attributes for efficient lookups
         session_item = {
             "PK": session_id,
             "SK": "session",
@@ -43,7 +44,13 @@ class SessionRepository:
             "token_type": cognito_tokens.get('token_type', 'Bearer'),
             "expires_in": cognito_tokens.get('expires_in'),
             "expires_at": expires_at,
-            "created_at": timestamp
+            "created_at": timestamp,
+            # GSI3 for session lookups
+            "GSI3-PK": f"session-{session_id}",
+            "GSI3-SK": "session",
+            # GSI1 for user sessions lookups
+            "GSI1-PK": f"user-{user_id}",
+            "GSI1-SK": f"session#{timestamp}"
         }
         
         # Add device info if provided
@@ -113,7 +120,7 @@ class SessionRepository:
     
     def get_user_sessions(self, user_id, include_expired=False):
         """
-        get all sessions for a specific user
+        get all sessions for a specific user using GSI1
         
         args:
             user_id (str): the user id
@@ -122,14 +129,18 @@ class SessionRepository:
         returns:
             dict: {'active': [...], 'expired': [...]}
         """
-        import boto3
-        from boto3.dynamodb.conditions import Attr
+        from boto3.dynamodb.conditions import Key
         
         try:
-            # scan for session records with matching user_id
-            response = self.dynamodb_service.dynamodb.Table(self.dynamodb_service.main_table_name).scan(
-                FilterExpression=Attr('SK').eq('session') & Attr('user_id').eq(user_id)
-            )
+            # Use GSI1 to query all sessions for this user
+            key_condition = Key('GSI1-PK').eq(f"user-{user_id}")
+            
+            # Query the GSI
+            response = self.dynamodb_service.query_index({
+                'IndexName': 'GSI1',
+                'KeyConditionExpression': key_condition,
+                'FilterExpression': Key('SK').eq('session')
+            })
             
             sessions = response.get('Items', [])
             active_sessions = []
