@@ -39,6 +39,31 @@ class DynamoDBService:
         response = self.main_table.get_item(Key=key)
         return response.get('Item')
     
+    def update_item(self, key, update_expression, expression_attribute_values, expression_attribute_names=None):
+        """
+        Update an item in the main table.
+        
+        Args:
+            key (dict): The key of the item to update
+            update_expression (str): The update expression
+            expression_attribute_values (dict): Values for the expression
+            expression_attribute_names (dict): Names for the expression (optional)
+            
+        Returns:
+            dict: The response from DynamoDB
+        """
+        params = {
+            'Key': key,
+            'UpdateExpression': update_expression,
+            'ExpressionAttributeValues': expression_attribute_values,
+            'ReturnValues': 'UPDATED_NEW'
+        }
+        
+        if expression_attribute_names:
+            params['ExpressionAttributeNames'] = expression_attribute_names
+            
+        return self.main_table.update_item(**params)
+    
     def query(self, key_condition_expression, expression_attribute_values=None, expression_attribute_names=None):
         """
         Query items from the main table.

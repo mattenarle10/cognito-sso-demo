@@ -157,6 +157,32 @@ export function useApi() {
     }
   }
 
+  // update user profile information
+  const updateUserProfile = async (updates: Record<string, any>, tokens: any): Promise<boolean> => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      if (!tokens?.id_token || !tokens?.access_token) {
+        throw new Error('authentication tokens required')
+      }
+
+      const response = await apiClient.patch('/user-profile', {
+        updates,
+        access_token: tokens.access_token
+      }, {
+        headers: { Authorization: `Bearer ${tokens.id_token}` }
+      })
+      
+      return response.data.success
+    } catch (err: any) {
+      error.value = err.response?.data?.message || 'failed to update profile'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     loading,
     error,
@@ -166,6 +192,7 @@ export function useApi() {
     getSession,
     authorizeApplication,
     getUserAuthorizations,
-    revokeAuthorization
+    revokeAuthorization,
+    updateUserProfile
   }
 } 

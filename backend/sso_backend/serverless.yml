@@ -33,6 +33,11 @@ provider:
             - logs:CreateLogStream
             - logs:PutLogEvents
           Resource: arn:aws:logs:${self:provider.region}:*:*
+        - Effect: Allow
+          Action:
+            - cognito-idp:UpdateUserAttributes
+            - cognito-idp:GetUser
+          Resource: arn:aws:cognito-idp:${self:provider.region}:*:userpool/${self:provider.environment.COGNITO_USER_POOL_ID}
 
 functions:
   # Cognito Triggers
@@ -102,6 +107,14 @@ functions:
       - httpApi:
           path: /user-authorizations/{application_id}
           method: delete
+
+  updateUserProfile:
+    handler: app.handlers.http.update_user_profile.handler
+    description: "Updates user profile information in Cognito"
+    events:
+      - httpApi:
+          path: /user-profile
+          method: patch
 
 plugins:
   - serverless-python-requirements
