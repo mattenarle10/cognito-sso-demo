@@ -56,10 +56,13 @@
                 <p class="text-zinc-200 font-medium">{{ userInfo?.name || 'not set' }}</p>
               </div>
               <AuthButton 
+                @click="openEditModal"
                 class="!bg-zinc-700 hover:!bg-zinc-600 !text-zinc-300 !text-sm !px-3 !py-1.5"
-                disabled
               >
-                coming soon
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+                edit
               </AuthButton>
             </div>
             
@@ -108,6 +111,15 @@
 
       </div>
     </AuthCard>
+
+    <!-- Edit Profile Modal -->
+    <EditProfileModal
+      v-if="showEditModal"
+      :current-name="userInfo?.name"
+      :tokens="currentTokens"
+      @save="handleProfileUpdate"
+      @cancel="closeEditModal"
+    />
   </AuthBackground>
 </template>
 
@@ -119,6 +131,7 @@ import { useToast } from 'vue-toastification'
 import AuthBackground from '../components/ui/AuthBackground.vue'
 import AuthCard from '../components/ui/AuthCard.vue'
 import AuthButton from '../components/ui/AuthButton.vue'
+import EditProfileModal from '../components/EditProfileModal.vue'
 
 // composables
 const router = useRouter()
@@ -132,6 +145,26 @@ const error = ref('')
 const userInfo = ref<any>(null)
 const authorizationCount = ref(0)
 const currentTokens = ref<any>(null)
+const showEditModal = ref(false)
+
+// modal methods
+const openEditModal = () => {
+  showEditModal.value = true
+}
+
+const closeEditModal = () => {
+  showEditModal.value = false
+}
+
+const handleProfileUpdate = (newName: string) => {
+  // update local user info to reflect the change immediately
+  if (userInfo.value) {
+    userInfo.value.name = newName
+  }
+  
+  // close modal
+  closeEditModal()
+}
 
 // load user data and authorization count
 const loadUserData = async () => {

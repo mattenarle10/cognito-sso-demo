@@ -5,7 +5,7 @@ import os
 # Add the app directory to the Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from utils.response import success_response, error_response
+from utils.response_formatter import success_response, error_response
 from services.auth.jwt_service import JWTService
 from services.aws.cognito_user_service import CognitoUserService
 from services.aws.dynamodb_service import DynamoDBService
