@@ -152,14 +152,26 @@ class UserProfileDomain:
                 # Update the user record with new values
                 update_expression = "SET "
                 expression_attribute_values = {}
+                expression_attribute_names = {}
                 expression_parts = []
                 
+                # Reserved keywords that need attribute names
+                reserved_keywords = {'name', 'status', 'type', 'data', 'timestamp', 'count', 'key'}
+                
                 for field, value in updates.items():
-                    expression_parts.append(f"{field} = :{field}")
+                    if field.lower() in reserved_keywords:
+                        # Use expression attribute names for reserved keywords
+                        attr_name = f"#{field}"
+                        expression_parts.append(f"{attr_name} = :{field}")
+                        expression_attribute_names[attr_name] = field
+                    else:
+                        expression_parts.append(f"{field} = :{field}")
+                    
                     expression_attribute_values[f":{field}"] = value
                 
-                # Add updated timestamp
-                expression_parts.append("updated_at = :updated_at")
+                # Add updated timestamp (also a reserved keyword)
+                expression_parts.append("#updated_at = :updated_at")
+                expression_attribute_names["#updated_at"] = "updated_at"
                 expression_attribute_values[":updated_at"] = datetime.now().isoformat()
                 
                 update_expression += ", ".join(expression_parts)
@@ -168,7 +180,8 @@ class UserProfileDomain:
                 self.user_repository.dynamodb_service.update_item(
                     key={"PK": user_id, "SK": "user"},
                     update_expression=update_expression,
-                    expression_attribute_values=expression_attribute_values
+                    expression_attribute_values=expression_attribute_values,
+                    expression_attribute_names=expression_attribute_names
                 )
                 
                 print(f"Successfully synced profile updates to DynamoDB for user {user_id}")
