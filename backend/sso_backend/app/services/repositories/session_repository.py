@@ -11,7 +11,7 @@ class SessionRepository:
         """initialize with dynamodb service"""
         self.dynamodb_service = dynamodb_service
     
-    def create_session(self, user_id, cognito_tokens, application_id):
+    def create_session(self, user_id, cognito_tokens, application_id, device_info=None):
         """
         create a new session and store cognito tokens
         
@@ -19,7 +19,8 @@ class SessionRepository:
             user_id (str): the user id
             cognito_tokens (dict): tokens from cognito (id_token, access_token, etc)
             application_id (str): which app this session is for
-            
+            device_info (dict): optional device information (user_agent, ip_address, etc.)
+        
         returns:
             str: the generated session_id
         """
@@ -44,6 +45,22 @@ class SessionRepository:
             "expires_at": expires_at,
             "created_at": timestamp
         }
+        
+        # Add device info if provided
+        if device_info:
+            # Store only necessary device info - no IP address for security
+            safe_device_info = {}
+            
+            # Only store user agent, not IP address
+            if device_info.get('user_agent'):
+                safe_device_info['user_agent'] = device_info.get('user_agent')
+                session_item["user_agent"] = device_info.get('user_agent')
+            
+            # Store the sanitized device info
+            session_item["device_info"] = safe_device_info
+            
+            # Log device info for debugging (without sensitive data)
+            print(f"Storing device info for session {session_id}: {safe_device_info}")
         
         # save to dynamodb
         self.dynamodb_service.put_item(session_item)

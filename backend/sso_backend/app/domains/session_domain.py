@@ -17,7 +17,7 @@ class SessionDomain:
         self.application_repository = application_repository
         self.jwt_service = jwt_service
     
-    def initialize_session(self, cognito_tokens, application_id):
+    def initialize_session(self, cognito_tokens, application_id, device_info=None):
         """
         initialize a new session with cognito tokens
         validates user authorization for the application first
@@ -25,10 +25,11 @@ class SessionDomain:
         args:
             cognito_tokens (dict): tokens from cognito
             application_id (str): the application requesting session
-            
+            device_info (dict): optional device information (user_agent, ip_address, etc.)
+        
         returns:
             str: session_id if successful
-            
+        
         raises:
             ValueError: if user not authorized or invalid tokens
         """
@@ -55,8 +56,8 @@ class SessionDomain:
         if not is_authorized:
             raise ValueError(f"user not authorized for application {application_id}")
         
-        # create the session with tokens
-        session_id = self.session_repository.create_session(user_id, cognito_tokens, application_id)
+        # create the session with tokens and device info
+        session_id = self.session_repository.create_session(user_id, cognito_tokens, application_id, device_info)
         
         return session_id
     
@@ -138,11 +139,70 @@ class SessionDomain:
     def _extract_device_info(self, session):
         """
         extract device info from session data
-        in future could parse user-agent from jwt or store separately
+        parses user-agent if available
         """
-        # placeholder for now - could be enhanced with user-agent parsing
+        # Check if we already have device_info in the session
+        if 'device_info' in session and isinstance(session['device_info'], dict):
+            # Return the stored device_info with any additional parsing
+            stored_device_info = session['device_info']
+            
+            # Start with basic info - no IP address for security
+            result = {}
+            
+            # Try to parse user agent if available
+            user_agent = stored_device_info.get('user_agent') or session.get('user_agent')
+            if user_agent:
+                # Basic parsing of user agent
+                browser = 'Unknown'
+                os = 'Unknown'
+                device = 'Unknown'
+                
+                # Very simple user agent parsing - in production you'd use a proper library
+                user_agent = user_agent.lower()
+                
+                # Detect browser
+                if 'firefox' in user_agent:
+                    browser = 'Firefox'
+                elif 'chrome' in user_agent and 'edg' not in user_agent:
+                    browser = 'Chrome'
+                elif 'safari' in user_agent and 'chrome' not in user_agent:
+                    browser = 'Safari'
+                elif 'edg' in user_agent:
+                    browser = 'Edge'
+                elif 'opera' in user_agent or 'opr' in user_agent:
+                    browser = 'Opera'
+                
+                # Detect OS
+                if 'windows' in user_agent:
+                    os = 'Windows'
+                elif 'macintosh' in user_agent or 'mac os' in user_agent:
+                    os = 'macOS'
+                elif 'linux' in user_agent:
+                    os = 'Linux'
+                elif 'android' in user_agent:
+                    os = 'Android'
+                elif 'iphone' in user_agent or 'ipad' in user_agent:
+                    os = 'iOS'
+                
+                # Detect device type
+                if 'mobile' in user_agent or 'android' in user_agent or 'iphone' in user_agent:
+                    device = 'Mobile'
+                elif 'tablet' in user_agent or 'ipad' in user_agent:
+                    device = 'Tablet'
+                else:
+                    device = 'Desktop'
+                
+                result.update({
+                    'browser': browser,
+                    'os': os,
+                    'device': device
+                })
+                
+                return result
+        
+        # Fallback if no device info available
         return {
-            'device_type': 'Web Browser',
+            'device': 'Unknown',
             'os': 'Unknown',
             'browser': 'Unknown'
         }
@@ -150,11 +210,10 @@ class SessionDomain:
     def _extract_location_info(self, session):
         """
         extract location info from session data
-        in future could use ip geolocation
+        in future could use general location (country only) for security
         """
-        # placeholder for now
+        # placeholder for now - no IP address for security
         return {
             'country': 'Unknown',
-            'city': 'Unknown',
-            'ip_address': 'Hidden'
+            'city': 'Unknown'
         } 

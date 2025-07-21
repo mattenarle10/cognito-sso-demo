@@ -70,10 +70,19 @@ def handler(event, context):
                 message="Missing required field: application_id",
                 error_code="MISSING_APPLICATION_ID"
             )
+            
+        # Extract device information from headers - only user agent for security
+        headers = event.get('headers', {})
+        user_agent = headers.get('User-Agent', '') or headers.get('user-agent', '')
+        
+        # Prepare device info dictionary - no IP address for security
+        device_info = {
+            'user_agent': user_agent
+        }
         
         # Initialize session using domain layer
         try:
-            session_id = session_domain.initialize_session(cognito_tokens, application_id)
+            session_id = session_domain.initialize_session(cognito_tokens, application_id, device_info)
         except ValueError as e:
             return error_response(
                 status_code=401,
