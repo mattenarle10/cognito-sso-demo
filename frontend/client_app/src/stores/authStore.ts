@@ -82,6 +82,7 @@ export const useAuthStore = defineStore('auth', () => {
     id_token: string
     access_token: string
     refresh_token?: string
+    session_id?: string
   }) {
     tokens.value = sessionTokens
     
@@ -90,6 +91,18 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('access_token', sessionTokens.access_token)
     if (sessionTokens.refresh_token) {
       localStorage.setItem('refresh_token', sessionTokens.refresh_token)
+    }
+    
+    // Store session ID if available
+    if (sessionTokens.session_id) {
+      localStorage.setItem('session_id', sessionTokens.session_id)
+    } else {
+      // Try to extract session ID from URL if not provided in tokens
+      const urlParams = new URLSearchParams(window.location.search)
+      const sessionId = urlParams.get('session_id')
+      if (sessionId) {
+        localStorage.setItem('session_id', sessionId)
+      }
     }
     
     // Parse the JWT token to get user information
@@ -114,18 +127,50 @@ export const useAuthStore = defineStore('auth', () => {
   }
   
   // Clear auth state on logout
-  function logout() {
-    tokens.value = null
-    user.value = null
-    isAuthenticated.value = false
-    
-    // Remove from localStorage
-    localStorage.removeItem('id_token')
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
-    
-    // Redirect to home page with signedout parameter
-    window.location.href = '/?signedout=true'
+  async function logout() {
+    try {
+      // First, revoke the session on the backend if we have tokens
+      if (tokens.value?.id_token) {
+        // Get the current session ID
+        const sessionId = localStorage.getItem('session_id')
+        
+        if (sessionId) {
+          // Call the SSO backend to revoke the session
+          const response = await fetch(`${import.meta.env.VITE_SSO_API_URL}/sessions/${sessionId}/revoke`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${tokens.value.id_token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+          
+          if (!response.ok) {
+            console.warn('Session revocation API returned an error:', await response.text())
+          } else {
+            console.log('Session successfully revoked on the backend')
+          }
+        } else {
+          console.warn('No session_id found in localStorage, skipping backend revocation')
+        }
+      }
+    } catch (error) {
+      console.error('Error revoking session:', error)
+      // Continue with local logout even if the API call fails
+    } finally {
+      // Clear local state
+      tokens.value = null
+      user.value = null
+      isAuthenticated.value = false
+      
+      // Remove from localStorage
+      localStorage.removeItem('id_token')
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
+      localStorage.removeItem('session_id')
+      
+      // Redirect to home page with signedout parameter
+      window.location.href = '/?signedout=true'
+    }
   }
   
   return {
