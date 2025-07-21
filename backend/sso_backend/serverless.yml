@@ -116,6 +116,22 @@ functions:
           path: /user-profile
           method: patch
 
+  getUserSessions:
+    handler: app.handlers.http.get_user_sessions.lambda_handler
+    description: "Gets all sessions for the current user"
+    events:
+      - httpApi:
+          path: /user-sessions
+          method: get
+
+  revokeUserSession:
+    handler: app.handlers.http.revoke_user_session.lambda_handler
+    description: "Revokes a specific session or performs bulk session operations"
+    events:
+      - httpApi:
+          path: /user-sessions/{session_id}
+          method: delete
+
 plugins:
   - serverless-python-requirements
 

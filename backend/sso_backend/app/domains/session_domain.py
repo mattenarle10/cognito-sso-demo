@@ -70,4 +70,91 @@ class SessionDomain:
         returns:
             dict: session data with tokens, or none if not found/expired
         """
-        return self.session_repository.get_session(session_id) 
+        return self.session_repository.get_session(session_id)
+    
+    def get_user_sessions(self, user_id, include_expired=False):
+        """
+        get all sessions for a user with additional info
+        
+        args:
+            user_id (str): the user id
+            include_expired (bool): whether to include expired sessions
+            
+        returns:
+            dict: sessions with enriched data
+        """
+        sessions_data = self.session_repository.get_user_sessions(user_id, include_expired)
+        
+        # enrich session data with additional info if needed
+        for session_list in [sessions_data['active'], sessions_data['expired']]:
+            for session in session_list:
+                # extract device info from tokens if available
+                session['session_id'] = session['PK']
+                session['device_info'] = self._extract_device_info(session)
+                session['location_info'] = self._extract_location_info(session)
+        
+        return sessions_data
+    
+    def revoke_session(self, session_id, requesting_user_id):
+        """
+        revoke a specific session with authorization check
+        
+        args:
+            session_id (str): the session to revoke
+            requesting_user_id (str): user requesting revocation
+            
+        returns:
+            bool: success status
+            
+        raises:
+            ValueError: if unauthorized or session not found
+        """
+        # get session to verify ownership
+        session = self.session_repository.get_session(session_id)
+        if not session:
+            raise ValueError("session not found")
+        
+        # verify user owns this session
+        if session.get('user_id') != requesting_user_id:
+            raise ValueError("unauthorized to revoke this session")
+        
+        # revoke the session
+        self.session_repository.delete_session(session_id)
+        return True
+    
+    def revoke_all_other_sessions(self, user_id, current_session_id):
+        """
+        revoke all other sessions for a user (keep current one)
+        
+        args:
+            user_id (str): the user id
+            current_session_id (str): current session to keep
+            
+        returns:
+            int: number of sessions revoked
+        """
+        return self.session_repository.revoke_all_user_sessions(user_id, current_session_id)
+    
+    def _extract_device_info(self, session):
+        """
+        extract device info from session data
+        in future could parse user-agent from jwt or store separately
+        """
+        # placeholder for now - could be enhanced with user-agent parsing
+        return {
+            'device_type': 'Web Browser',
+            'os': 'Unknown',
+            'browser': 'Unknown'
+        }
+    
+    def _extract_location_info(self, session):
+        """
+        extract location info from session data
+        in future could use ip geolocation
+        """
+        # placeholder for now
+        return {
+            'country': 'Unknown',
+            'city': 'Unknown',
+            'ip_address': 'Hidden'
+        } 
