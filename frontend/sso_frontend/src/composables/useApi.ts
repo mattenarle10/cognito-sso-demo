@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { apiClient } from '../utils/api'
 import { API_CONFIG } from '../utils/constants'
-import type { AppValidationResponse, UserAuthResponse, SessionResponse, TokenResponse } from '../types/api'
+import type { AppValidationResponse, UserAuthResponse, SessionResponse, TokenResponse, UserSession } from '../types/api'
 
 export function useApi() {
   const loading = ref(false)
@@ -183,6 +183,55 @@ export function useApi() {
     }
   }
 
+  // get user's active sessions
+  const getUserSessions = async (idToken?: string): Promise<{ sessions: { active: UserSession[], expired: UserSession[] }; summary: { active_count: number, expired_count: number, total_count: number }; user_id: string } | null> => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const token = idToken || localStorage.getItem('id_token') || localStorage.getItem('temp_id_token')
+      if (!token) {
+        throw new Error('no authentication token found')
+      }
+
+      const response = await apiClient.get('/user-sessions', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      return response.data.data
+    } catch (err: any) {
+      error.value = err.response?.data?.message || 'failed to get sessions'
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // revoke a user session
+  const revokeUserSession = async (sessionId: string, idToken?: string): Promise<boolean> => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const token = idToken || localStorage.getItem('id_token') || localStorage.getItem('temp_id_token')
+      if (!token) {
+        throw new Error('no authentication token found')
+      }
+
+      console.log(`Revoking session: ${sessionId}`)
+      const response = await apiClient.delete(`/user-sessions/${sessionId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      console.log('Revoke response:', response.data)
+      return true
+    } catch (err: any) {
+      console.error('Error revoking session:', err)
+      error.value = err.response?.data?.message || 'failed to revoke session'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     loading,
     error,
@@ -193,6 +242,8 @@ export function useApi() {
     authorizeApplication,
     getUserAuthorizations,
     revokeAuthorization,
-    updateUserProfile
+    updateUserProfile,
+    getUserSessions,
+    revokeUserSession
   }
 } 

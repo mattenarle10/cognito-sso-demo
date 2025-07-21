@@ -29,3 +29,22 @@ export interface TokenResponse {
   expires_at: string
   created_at: string
 } 
+
+export interface UserSession {
+  session_id: string
+  user_id: string
+  application_id?: string
+  application_name?: string
+  token_type?: string
+  expires_in?: number | null
+  device_info?: {
+    browser?: string
+    os?: string
+    device?: string
+    ip_address?: string
+  }
+  is_current?: boolean
+  created_at?: string
+  last_used_at?: string
+  expires_at?: string
+}
