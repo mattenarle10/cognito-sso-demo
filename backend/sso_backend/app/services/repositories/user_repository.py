@@ -18,7 +18,7 @@ class UserRepository:
             dynamodb_service: An instance of DynamoDBService
         """
         self.dynamodb_service = dynamodb_service
-        self.table_name = dynamodb_service.table_name
+        self.table_name = dynamodb_service.main_table_name
     
     def create_user(self, cognito_attributes):
         """

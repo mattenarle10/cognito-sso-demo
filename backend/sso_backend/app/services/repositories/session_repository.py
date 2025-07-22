@@ -116,7 +116,7 @@ class SessionRepository:
             "SK": "session"
         }
         
-        self.dynamodb_service.main_table.delete_item(Key=key)
+        self.dynamodb_service.dynamodb.Table(self.table_name).delete_item(Key=key)
     
     def get_user_sessions(self, user_id, include_expired=False):
         """
