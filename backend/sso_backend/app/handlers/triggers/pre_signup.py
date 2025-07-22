@@ -122,14 +122,6 @@ def handler(event, context):
                 print(f"User with email {user_email} already exists")
                 raise Exception("A user with this email already exists")
             
-            # Check for duplicate phone number
-            user_phone = event["request"]["userAttributes"].get("phone_number")
-            if user_phone:
-                existing_user = user_repository.find_user_by_phone(user_phone)
-                
-                if existing_user:
-                    print(f"User with phone {user_phone} already exists")
-                    raise Exception("A user with this phone number already exists")
         
         return event
         
