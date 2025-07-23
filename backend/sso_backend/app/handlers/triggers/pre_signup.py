@@ -54,6 +54,10 @@ def handler(event, context):
         if event["triggerSource"] == "PreSignUp_ExternalProvider":
             print("External provider signup detected")
             
+            # Check for client_metadata
+            client_metadata = event.get("request", {}).get("clientMetadata", {})
+            print(f"Client metadata received: {json.dumps(client_metadata)}")
+            
             # Auto-verify email for social logins
             event["response"]["autoVerifyEmail"] = True
             event["request"]["userAttributes"]["email_verified"] = "true"
@@ -69,6 +73,10 @@ def handler(event, context):
                 # Mark user as needing profile completion
                 event["request"]["userAttributes"]["custom:needs_profile_completion"] = "true"
                 print("User marked as needing profile completion")
+                
+            # Always auto-confirm users from social providers
+            event["response"]["autoConfirmUser"] = True
+            print("Auto-confirming social provider user")
             
             # Check if there's an existing user with this email
             existing_user = user_repository.find_user_by_email(user_email)

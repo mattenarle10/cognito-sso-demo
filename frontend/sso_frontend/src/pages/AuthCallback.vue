@@ -140,6 +140,8 @@ onMounted(async () => {
         family_name: payload.family_name || ''
       }
       
+      console.log('Redirecting to profile completion with user info:', userInfo)
+      
       // Redirect to complete profile with nonce and user info
       router.replace({ 
         name: 'CompleteProfile',
