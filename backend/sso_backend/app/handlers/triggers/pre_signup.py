@@ -37,8 +37,13 @@ def handler(event, context):
     try:
         print("PreSignUp trigger received event:", json.dumps(event))
         
-        # Confirm the user automatically
-        event["response"]["autoConfirmUser"] = True
+        # Only auto-confirm users for external providers (social logins)
+        if event["triggerSource"] == "PreSignUp_ExternalProvider":
+            print("External provider signup detected, auto-confirming user.")
+            event["response"]["autoConfirmUser"] = True
+        else:
+            print("Regular signup flow detected, NOT auto-confirming user.")
+            event["response"]["autoConfirmUser"] = False
         
         # If the signup was from AdminCreateUser, just return
         if event["triggerSource"] == "PreSignUp_AdminCreateUser":

@@ -4,6 +4,7 @@ import {
   SignUpCommand,
   ConfirmSignUpCommand,
   ResendConfirmationCodeCommand,
+  GetUserCommand,
   type InitiateAuthCommandInput,
   type SignUpCommandInput,
   type ConfirmSignUpCommandInput
@@ -125,11 +126,22 @@ class CognitoService {
     }
 
     try {
+      console.log('[Cognito] Confirming signup with params:', JSON.stringify({ ...params, ConfirmationCode: '***' }, null, 2))
       const command = new ConfirmSignUpCommand(params)
       await cognitoClient.send(command)
+      // Remove stored UserSub after successful confirmation
+      localStorage.removeItem(`cognito_username_${email}`)
+      console.log('[Cognito] Signup confirmed successfully')
     } catch (error: any) {
-      console.error('cognito confirm signup error:', error)
-      throw this.handleCognitoError(error)
+      console.error('[Cognito] confirmSignUp error:', error)
+      // Show actual Cognito error for confirmation
+      if (error.name === 'NotAuthorizedException' && error.message && error.message.includes('Current status is CONFIRMED')) {
+        // User is already confirmed, allow flow to continue
+        console.log('[Cognito] User already confirmed, proceeding to login')
+        return
+      }
+      // Map other errors as needed, but show actual message for debugging
+      throw new Error(error.message || 'Failed to confirm signup')
     }
   }
 

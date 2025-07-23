@@ -177,6 +177,7 @@ const handlePaste = (event: ClipboardEvent) => {
 const email = computed(() => route.query.email as string)
 const appName = computed(() => route.query.application_name as string)
 const channelId = computed(() => route.query.channel_id as string)
+const password = computed(() => route.query.password as string || '')
 
 // computed links with preserved params
 const registerLink = computed(() => ({
@@ -198,7 +199,7 @@ const clearErrors = () => {
 // handle otp verification
 const handleOtpVerification = async () => {
   clearErrors()
-  
+
   if (!otpCode.value) {
     errors.value.otp = 'Verification code is required'
     return
@@ -212,28 +213,29 @@ const handleOtpVerification = async () => {
   loading.value = true
 
   try {
-    // cognito email verification with application context
     await cognitoService.confirmSignUp({
       email: email.value,
       code: otpCode.value,
       applicationName: appName.value,
       channelId: channelId.value
     })
-    
-    // after successful verification, redirect to login
+
+    // Only redirect to login if confirmation succeeded
     const loginQuery = {
       application_name: appName.value,
       channel_id: channelId.value,
-      verified: 'true' // Add flag to show welcome message on login page
+      verified: 'true'
     }
-    
     router.push({
       name: 'login',
       query: loginQuery
     })
-
   } catch (err: any) {
-    error.value = err.message || 'Verification failed. Please try again.'
+    if (err.message && err.message.toLowerCase().includes('already confirmed')) {
+      error.value = 'Your email is already confirmed. Please log in.'
+    } else {
+      error.value = err.message || 'Verification failed. Please try again.'
+    }
   } finally {
     loading.value = false
   }
