@@ -5,6 +5,12 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 
+// Import Amplify configuration
+import configureAmplify from './config/amplify'
+
+// Initialize Amplify
+configureAmplify()
+
 // Import Toast Notification
 import Toast, { POSITION, type PluginOptions } from 'vue-toastification'
 import 'vue-toastification/dist/index.css'

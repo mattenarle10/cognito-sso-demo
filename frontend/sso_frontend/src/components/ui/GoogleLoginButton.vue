@@ -1,57 +1,48 @@
 <template>
-    <button
-      class="google-login-btn"
-      @click="loginWithGoogle"
-      type="button"
-    >
-    <img src="../../assets/google-icon.svg" alt="Google" class="icon" />    </button>
-  </template>
-  
-  <script setup lang="ts">
-  function loginWithGoogle() {
-    const domain = import.meta.env.VITE_COGNITO_DOMAIN
-    const clientId = import.meta.env.VITE_COGNITO_CLIENT_ID
-    const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`)
-    // Include email and profile scopes to get user information
-    const scopes = encodeURIComponent('openid email profile')
-    
-    // Add client_metadata to allow pre-signup Lambda to handle missing attributes
-    const clientMetadata = encodeURIComponent(JSON.stringify({
-      allow_missing_attributes: 'true',
-      source: 'google_oauth'
-    }))
-    
-    const url = `${domain}/oauth2/authorize?identity_provider=Google&response_type=CODE&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scopes}&client_metadata=${clientMetadata}`
-    
-    console.log('Google login URL:', url)
-    console.log('Domain:', domain)
-    console.log('Client ID:', clientId)
-    console.log('Redirect URI:', redirectUri)
-    console.log('Scopes:', scopes)
-    console.log('Client Metadata:', clientMetadata)
-    
-    window.location.href = url
-  }
-  </script>
-  
-  <style scoped>
-  .google-login-btn {
+  <button 
+    @click="loginWithGoogle" 
+    class="flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+  >
+    <img src="@/assets/google-icon.svg" alt="Google" class="w-5 h-5 mr-2" />
+    Sign in with Google
+  </button>
+</template>
 
-    gap: 0.5rem;
-    color: #222;
-    border: 1px solid #4c4c4c;
-    border-radius: 6px;
-    padding: 0.6rem 1.5rem;
-    font-weight: 500;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: box-shadow 0.2s;
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useRoute } from 'vue-router'
+import authService from '@/services/authService'
+import { useToast } from 'vue-toastification'
+
+const route = useRoute()
+const toast = useToast()
+const isLoading = ref(false)
+
+const loginWithGoogle = async () => {
+  try {
+    isLoading.value = true
+    
+    // Get application name and channel ID from route params or query
+    const appName = route.params.application_name || route.query.application_name || ''
+    const channelId = route.params.channel_id || route.query.channel_id || ''
+    
+    console.log('Starting Google OAuth login flow with Amplify')
+    console.log('Application:', appName)
+    console.log('Channel:', channelId)
+    
+    // Use Amplify's federated sign-in with Google
+    await authService.signInWithGoogle()
+    
+    // The page will be redirected to Google's login page
+    // Amplify will handle the callback and token exchange
+  } catch (error) {
+    console.error('Error during Google login:', error)
+    toast.error('Failed to sign in with Google. Please try again.')
+    isLoading.value = false
   }
-  .google-login-btn:hover {
-    background-color: #323131;
-  }
-  .icon {
-    width: 20px;
-    height: 20px;
-  }
-  </style>
+}
+</script>
+
+<style scoped>
+/* Add any custom styles here */
+</style>

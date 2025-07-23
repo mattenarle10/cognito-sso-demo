@@ -1,279 +1,216 @@
 <template>
-  <AuthBackground>
-    <AuthCard>
-      <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold mb-2 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-300 bg-clip-text text-transparent">The Grind.</h1>
-        <p class="text-zinc-500">Signing in with Google...</p>
-      </div>
-      
-      <div v-if="loading" class="flex flex-col items-center gap-4 py-8">
-        <span class="loader" />
-        <span class="text-zinc-400">Processing your login...</span>
-      </div>
-      
-      <div v-else-if="error" class="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm">
-        <p class="mb-2">{{ error }}</p>
-        <div class="mt-4 text-center">
-          <router-link to="/login" class="text-zinc-200 hover:text-white underline underline-offset-2">
-            Go back to login
-          </router-link>
+  <div class="auth-callback">
+    <AuthBackground />
+    <div class="container">
+      <AuthCard>
+        <template #header>
+          <h1 class="text-center text-2xl font-bold mb-4">Authentication</h1>
+        </template>
+        
+        <div v-if="loading" class="loading flex flex-col items-center justify-center py-8">
+          <div class="spinner mb-4"></div>
+          <p class="text-gray-300">Processing your login...</p>
         </div>
-      </div>
-    </AuthCard>
-    
-    <!-- Consent Screen Modal -->
-    <ConsentScreen
-      v-if="showConsentScreen"
-      :applicationId="appName"
-      :applicationName="appName"
-      :idToken="tokens?.id_token"
-      @approved="handleConsentApproved"
-      @denied="handleConsentDenied"
-      @error="handleConsentError"
-    />
-  </AuthBackground>
+        
+        <div v-else-if="error" class="error flex flex-col items-center justify-center py-4">
+          <div class="bg-red-900/30 p-4 rounded-lg mb-4 w-full">
+            <h2 class="text-red-400 font-semibold mb-2">Authentication Error</h2>
+            <p class="text-gray-300 mb-4">{{ error }}</p>
+          </div>
+          <button @click="goToLogin" class="btn-primary w-full">Return to Login</button>
+          
+          <!-- Special case for phone_number attribute error -->
+
+        </div>
+      </AuthCard>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
-import { useToast } from 'vue-toastification'
-import { useApi } from '../composables/useApi'
-import AuthBackground from '../components/ui/AuthBackground.vue'
-import AuthCard from '../components/ui/AuthCard.vue'
-import ConsentScreen from '../components/ConsentScreen.vue'
+import { useRouter, useRoute } from 'vue-router'
+import { Hub } from 'aws-amplify/utils'
+import { fetchUserAttributes } from 'aws-amplify/auth'
+import authService from '@/services/authService'
+import { useApi } from '@/composables/useApi'
+
+const router = useRouter()
+const route = useRoute()
+const api = useApi()
 
 const loading = ref(true)
 const error = ref('')
-const route = useRoute()
-const router = useRouter()
-const toast = useToast()
-const api = useApi()
+const appName = ref('')
+const channelId = ref('')
 
-// State for consent screen
-const showConsentScreen = ref(false)
-const tokens = ref<any>(null)
-
-// Get application info from query params or defaults
-const appName = ref(route.query.application_name as string || import.meta.env.VITE_DEFAULT_APPLICATION_NAME)
-const channelId = ref(route.query.channel_id as string || import.meta.env.VITE_DEFAULT_CHANNEL_ID)
-
-// Cognito OAuth config
-const cognitoDomain = import.meta.env.VITE_COGNITO_DOMAIN
-const clientId = import.meta.env.VITE_COGNITO_CLIENT_ID
-const redirectUri = `${window.location.origin}/auth/callback`
-
-onMounted(async () => {
-  // Check for error parameters from Cognito
-  if (route.query.error) {
-    const errorDesc = route.query.error_description as string || ''
-    
-    // Check specifically for the 'attributes required' error
-    if (errorDesc.includes('attributes required')) {
-      // Extract required attributes from error message
-      const requiredAttributes = errorDesc.match(/\[(.*?)\]/)?.[1].split(',').map((attr: string) => attr.trim()) || []
-      
-      // Redirect to complete profile with required attributes
-      router.replace({ 
-        name: 'CompleteProfile',
-        query: {
-          required_attributes: requiredAttributes.join(','),
-          application_name: appName.value,
-          channel_id: channelId.value,
-          redirect_url: route.query.redirect_url as string
-        }
-      })
-      return
-    } else {
-      // Handle other errors
-      error.value = `Authentication error: ${route.query.error_description}`
-      loading.value = false
-      return
-    }
-  }
-  
-  const code = route.query.code
-  if (!code) {
-    error.value = 'Missing authorization code from Google login.'
-    loading.value = false
-    return
-  }
-  
+// Function to handle successful authentication
+const handleSuccessfulAuth = async () => {
   try {
-    // Exchange code for tokens
-    const params = new URLSearchParams()
-    params.append('grant_type', 'authorization_code')
-    params.append('client_id', clientId)
-    params.append('code', code as string)
-    params.append('redirect_uri', redirectUri)
+    // Get the current session with tokens
+    const tokens = await authService.getCurrentSession()
+    if (!tokens) {
+      throw new Error('Failed to get authentication tokens')
+    }
 
-    const resp = await axios.post(
-      `${cognitoDomain}/oauth2/token`,
-      params,
-      {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-      }
-    )
+    // Check if user needs to complete their profile
+    const needsProfileCompletion = await authService.checkNeedsProfileCompletion()
     
-    // Store tokens from the response
-    const { access_token, id_token, refresh_token } = resp.data
-    tokens.value = { access_token, id_token, refresh_token }
-    
-    // Decode the ID token to check for custom attributes
-    const payload = JSON.parse(atob(id_token.split('.')[1]))
-    console.log('ID token payload:', payload)
-    
-    // Check if user needs profile completion (from our pre_signup Lambda trigger)
-    if (payload['custom:needs_profile_completion'] === 'true') {
-      console.log('User needs profile completion')
-      // Generate a nonce for secure token storage
-      const nonce = Math.random().toString(36).substring(2) + Date.now()
+    if (needsProfileCompletion) {
+      console.log('User needs to complete their profile')
       
-      // Store tokens in localStorage with the nonce
-      localStorage.setItem(`temp_oauth_tokens_${nonce}`, JSON.stringify(tokens.value))
-      
-      // Extract user info for pre-filling the profile form
-      const userInfo = {
-        email: payload.email || '',
-        given_name: payload.given_name || '',
-        family_name: payload.family_name || ''
-      }
-      
-      console.log('Redirecting to profile completion with user info:', userInfo)
-      
-      // Redirect to complete profile with nonce and user info
-      router.replace({ 
-        name: 'CompleteProfile',
-        query: {
-          required_attributes: 'phone_number',
-          application_name: appName.value,
-          channel_id: channelId.value,
-          redirect_url: route.query.redirect_url as string,
-          token_nonce: nonce,
-          // Pass user info in query params
-          email: userInfo.email,
-          given_name: userInfo.given_name,
-          family_name: userInfo.family_name
-        }
-      })
-      return
-    }
-    
-    // Check if user is authorized for this application
-    const authCheck = await api.checkAppUser(id_token, appName.value)
-    
-    if (!authCheck) {
-      // User needs to authorize this application - show consent screen
-      showConsentScreen.value = true
-      loading.value = false
-      return
-    }
-    
-    // User is already authorized - create session and redirect
-    await createSessionAndRedirect()
-    
-  } catch (e: any) {
-    // Check if the error is related to missing attributes
-    const errorMsg = e.response?.data?.error_description || e.message
-    
-    // Check if the error is related to missing attributes
-    if (errorMsg.includes('attributes required') && errorMsg.includes('phone_number')) {
-      // If we have tokens, store them in localStorage with a nonce
-      if (tokens.value) {
-        const nonce = Math.random().toString(36).substring(2) + Date.now();
-        localStorage.setItem(`temp_oauth_tokens_${nonce}`, JSON.stringify(tokens.value));
-        // Redirect to complete profile with nonce in query
-        router.replace({ 
+      // In Amplify v6, we need to fetch user attributes separately
+      try {
+        const attributes = await fetchUserAttributes()
+        
+        // Redirect to profile completion page
+        router.replace({
           name: 'CompleteProfile',
           query: {
             required_attributes: 'phone_number',
             application_name: appName.value,
             channel_id: channelId.value,
             redirect_url: route.query.redirect_url as string,
-            email: route.query.email as string || '',
-            token_nonce: nonce
+            email: attributes.email || '',
+            given_name: attributes.given_name || '',
+            family_name: attributes.family_name || ''
           }
         })
-        return;
+        return
+      } catch (attrError: any) {
+        console.error('Error fetching user attributes:', attrError)
+        throw new Error('Failed to get user attributes')
       }
-      // If no tokens, fallback to error
-      error.value = 'Could not retrieve authentication tokens for profile completion.';
-      loading.value = false;
-      return;
-    } else {
-      error.value = 'Failed to sign in with Google. ' + errorMsg
+    }
+    
+    // Check if user is authorized for this application
+    const authCheck = await api.checkAppUser(tokens.idToken, appName.value)
+    
+    // If user is not authorized, create the app-user relationship
+    if (!authCheck || !authCheck.authorized) {
+      await api.authorizeApplication({
+        application_id: appName.value,
+        granted_scopes: ['profile', 'orders'],
+        action: 'approve'
+      }, tokens.idToken)
+    }
+    
+    // Get redirect URL from query params or use default
+    const redirectUrl = route.query.redirect_url as string || '/'
+    
+    // Redirect to the application
+    window.location.href = redirectUrl
+  } catch (err: any) {
+    console.error('Error during authentication:', err)
+    error.value = err.message || 'Failed to process your login. Please try again.'
+    loading.value = false
+  }
+}
+
+// Function to navigate back to login
+const goToLogin = () => {
+  router.push('/')
+}
+
+onMounted(() => {
+  // Get application name and channel ID from route params or query
+  appName.value = route.params.application_name as string || route.query.application_name as string || ''
+  channelId.value = route.params.channel_id as string || route.query.channel_id as string || ''
+  
+  // Listen for auth events from Amplify
+  const unsubscribe = Hub.listen('auth', ({ payload }) => {
+    const { event } = payload
+    
+    if (event === 'signedIn') {
+      console.log('User signed in')
+      handleSuccessfulAuth()
+    } else if (event === 'signedOut') {
+      console.log('User signed out')
+    } else if (event === 'customOAuthState') {
+      console.log('Custom OAuth state:', payload.data)
+    } else if (event === 'signInWithRedirect_failure') {
+      console.error('User sign in failed:', payload.data)
+      error.value = 'Sign in failed. Please try again.'
       loading.value = false
     }
+  })
+  
+  // Check if we have an error in the URL
+  if (route.query.error) {
+    error.value = `Authentication error: ${route.query.error_description || route.query.error}`
+    loading.value = false
+    return
+  }
+  
+  // Check if we're already authenticated (for handling browser refresh)
+  authService.getCurrentUser()
+    .then(user => {
+      if (user) {
+        console.log('User is already authenticated')
+        handleSuccessfulAuth()
+      } else {
+        // This will be handled by the Hub listener when Amplify completes the OAuth flow
+        console.log('Waiting for authentication to complete...')
+      }
+    })
+    .catch((err: any) => {
+      console.error('Error checking authentication status:', err)
+      error.value = err.message || 'Failed to check authentication status'
+      loading.value = false
+    })
+  
+  // Cleanup listener when component unmounts
+  return () => {
+    unsubscribe()
   }
 })
-
-// Create session and redirect to client app
-async function createSessionAndRedirect() {
-  try {
-    // Create session with the tokens
-    const sessionResponse = await api.initSession(tokens.value, appName.value)
-    
-    // Show success toast
-    toast.success('Successfully signed in with Google!')
-    
-    // Redirect back to client app with session_id
-    if (sessionResponse) {
-      // Short delay to allow toast to be seen
-      setTimeout(() => {
-        const redirectUrl = route.query.redirect_url as string || import.meta.env.VITE_DEFAULT_REDIRECT_URL
-        window.location.href = `${redirectUrl}?session_id=${sessionResponse.session_id}`
-      }, 1000)
-    } else {
-      throw new Error('Failed to create session')
-    }
-  } catch (err: any) {
-    error.value = err.message || 'Failed to initialize session'
-    loading.value = false
-  }
-}
-
-// Consent screen handlers
-const handleConsentApproved = async () => {
-  try {
-    loading.value = true
-    showConsentScreen.value = false
-    
-    // Small delay to ensure authorization record is fully created
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    // Create session with the authorized user
-    await createSessionAndRedirect()
-  } catch (err: any) {
-    error.value = err.message || 'Authorization failed'
-    loading.value = false
-  }
-}
-
-const handleConsentDenied = () => {
-  showConsentScreen.value = false
-  error.value = 'You declined to authorize this application.'
-  loading.value = false
-}
-
-const handleConsentError = (err: string) => {
-  showConsentScreen.value = false
-  error.value = err || 'An error occurred during authorization.'
-  loading.value = false
-}
 </script>
 
 <style scoped>
-.loader {
-  border: 4px solid #333;
-  border-top: 4px solid #fff;
+.auth-callback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.loading, .error {
+  text-align: center;
+  max-width: 400px;
+  padding: 2rem;
+  border-radius: 8px;
+  background-color: #2a2a2a;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.spinner {
+  border: 4px solid rgba(255, 255, 255, 0.1);
   border-radius: 50%;
-  width: 32px;
-  height: 32px;
+  border-top: 4px solid #3498db;
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 1rem;
   animation: spin 1s linear infinite;
 }
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+.btn-primary {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 1rem;
+}
+
+.btn-primary:hover {
+  background-color: #2980b9;
 }
 </style>

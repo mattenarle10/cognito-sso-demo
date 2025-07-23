@@ -52,31 +52,33 @@ def handler(event, context):
 
         # Handle social provider signup (Google, Facebook, etc.)
         if event["triggerSource"] == "PreSignUp_ExternalProvider":
-            print("External provider signup detected")
+            logger.info('Social login detected')
             
-            # Check for client_metadata
-            client_metadata = event.get("request", {}).get("clientMetadata", {})
-            print(f"Client metadata received: {json.dumps(client_metadata)}")
+            # Auto-confirm and auto-verify the user
+            event['response']['autoConfirmUser'] = True
+            event['response']['autoVerifyEmail'] = True
+            event['request']['userAttributes']['email_verified'] = 'true'
             
-            # Auto-verify email for social logins
-            event["response"]["autoVerifyEmail"] = True
-            event["request"]["userAttributes"]["email_verified"] = "true"
+            # Ensure phone_number is present and valid (for Google OAuth and other social)
+            phone_number = event['request']['userAttributes'].get('phone_number')
+            if not phone_number or str(phone_number).strip() == '':
+                print('[PreSignUp] Phone number missing or empty, setting placeholder for social login')
+                event['request']['userAttributes']['phone_number'] = '+00000000000'
+                event['request']['userAttributes']['custom:needs_profile_completion'] = 'true'
+                print('[PreSignUp] Added placeholder phone number and needs_profile_completion flag')
+            else:
+                print(f"[PreSignUp] Phone number present: {phone_number}")
+            
+            # Log all user attributes for debugging
+            logger.info(f"User attributes after modification: {event['request']['userAttributes']}")
+            
+            # Extract identity provider information
+            provider = event['request'].get('userAttributes', {}).get('identities')
+            logger.info(f'Identity provider info: {provider}')
             
             # Extract email from user attributes
             user_email = event["request"]["userAttributes"]["email"]
             print(f"Social login with email: {user_email}")
-            
-            # Set a placeholder phone number if not provided
-            if "phone_number" not in event["request"]["userAttributes"] or not event["request"]["userAttributes"]["phone_number"]:
-                print("Phone number not provided, setting placeholder")
-                event["request"]["userAttributes"]["phone_number"] = "+00000000000"
-                # Mark user as needing profile completion
-                event["request"]["userAttributes"]["custom:needs_profile_completion"] = "true"
-                print("User marked as needing profile completion")
-                
-            # Always auto-confirm users from social providers
-            event["response"]["autoConfirmUser"] = True
-            print("Auto-confirming social provider user")
             
             # Check if there's an existing user with this email
             existing_user = user_repository.find_user_by_email(user_email)

@@ -1,125 +1,110 @@
 <template>
   <AuthBackground>
-    <AuthCard title="Complete Your Profile" subtitle="Please provide the missing information to complete your profile">
-      <form @submit.prevent="submitForm" class="mt-6">
-        <!-- First Name and Last Name (Two columns) -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <!-- First Name -->
-          <div>
-            <label for="firstName" class="text-zinc-300 font-medium tracking-wide text-xs block flex items-center gap-2 mb-1.5">
-              <UserIcon :size="14" class="text-zinc-500" />
-              First Name
-            </label>
-            <div class="relative">
-              <input
-                id="firstName"
-                type="text"
-                v-model="formData.given_name"
-                placeholder="First Name"
-                readonly
-                class="bg-zinc-900/60 border border-zinc-700/60 text-white placeholder:text-zinc-500 focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 h-10 rounded-lg font-light tracking-wide text-sm transition-all duration-200 px-3 relative w-full opacity-70"
-              />
-              <div class="absolute inset-0 bg-gradient-to-r from-zinc-800/5 to-transparent rounded-lg pointer-events-none" />
-            </div>
-          </div>
-          
-          <!-- Last Name -->
-          <div>
-            <label for="lastName" class="text-zinc-300 font-medium tracking-wide text-xs block flex items-center gap-2 mb-1.5">
-              <UserIcon :size="14" class="text-zinc-500" />
-              Last Name
-            </label>
-            <div class="relative">
-              <input
-                id="lastName"
-                type="text"
-                v-model="formData.family_name"
-                placeholder="Last Name"
-                readonly
-                class="bg-zinc-900/60 border border-zinc-700/60 text-white placeholder:text-zinc-500 focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 h-10 rounded-lg font-light tracking-wide text-sm transition-all duration-200 px-3 relative w-full opacity-70"
-              />
-              <div class="absolute inset-0 bg-gradient-to-r from-zinc-800/5 to-transparent rounded-lg pointer-events-none" />
-            </div>
-          </div>
-        </div>
-        
-        <!-- Email Address (Full width) -->
-        <div class="mb-4">
-          <label for="email" class="text-zinc-300 font-medium tracking-wide text-xs block flex items-center gap-2 mb-1.5">
-            <MailIcon :size="14" class="text-zinc-500" />
-            Email Address
-          </label>
-          <div class="relative">
-            <input
-              id="email"
-              type="email"
-              v-model="formData.email"
-              placeholder="Email Address"
-              readonly
-              class="bg-zinc-900/60 border border-zinc-700/60 text-white placeholder:text-zinc-500 focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 h-10 rounded-lg font-light tracking-wide text-sm transition-all duration-200 px-3 relative w-full opacity-70"
-            />
-            <div class="absolute inset-0 bg-gradient-to-r from-zinc-800/5 to-transparent rounded-lg pointer-events-none" />
-          </div>
-        </div>
-        
-        <!-- Phone Number (Full width) -->
-        <div class="mb-4">
-          <label for="phone" class="text-zinc-300 font-medium tracking-wide text-xs block flex items-center gap-2 mb-1.5">
-            <PhoneIcon :size="14" class="text-zinc-500" />
-            Mobile Number
-          </label>
-          <div class="relative">
-            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <span class="text-zinc-400 text-sm">+63</span>
-            </div>
-            <input
-              id="phone"
-              type="tel"
-              v-model="phoneWithoutCode"
-              placeholder="9XX XXX XXXX"
-              required
-              class="bg-zinc-900/60 border border-zinc-700/60 text-white placeholder:text-zinc-500 focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 h-10 rounded-lg font-light tracking-wide text-sm transition-all duration-200 pl-12 pr-3 relative w-full"
-              @input="validatePhone"
-            />
-            <div class="absolute inset-0 bg-gradient-to-r from-zinc-800/5 to-transparent rounded-lg pointer-events-none" />
-          </div>
-          <p v-if="errors.phone" class="text-red-400 text-xs mt-0.5">{{ errors.phone }}</p>
-        </div>
-
-        <!-- Marketing Checkbox -->
-        <div class="mt-4">
-          <label class="flex items-center gap-2 cursor-pointer group">
-            <div class="relative flex items-center">
-              <input
-                type="checkbox"
-                v-model="formData.accepts_marketing"
-                class="peer sr-only"
-              />
-              <div class="w-5 h-5 border border-zinc-700 rounded bg-zinc-900/60 peer-checked:bg-zinc-700 peer-checked:border-zinc-600 transition-all duration-200"></div>
-              <CheckIcon :size="12" class="absolute text-white left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 peer-checked:opacity-100 transition-opacity duration-200" />
-            </div>
-            <span class="text-zinc-400 text-sm group-hover:text-zinc-300 transition-colors duration-200">I agree to receive marketing communications</span>
-          </label>
-        </div>
-
-        <!-- Submit Button -->
-        <div class="flex justify-center mt-6">
-          <AuthButton
-            type="submit"
-            :loading="loading"
-            :disabled="!isFormValid"
-            class="w-full sm:w-1/2"
-          >
-            Complete Profile
-            <ArrowRightIcon :size="16" class="ml-1 transition-transform duration-200" />
-          </AuthButton>
-        </div>
-      </form>
-
-      <!-- Error Display -->
-      <div v-if="error" class="mt-4 p-3 bg-red-900/20 border border-red-800/50 rounded-lg text-red-400 text-sm">
+    <AuthCard>
+      <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold mb-2 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-300 bg-clip-text text-transparent">The Grind.</h1>
+        <p class="text-zinc-500">Complete your profile</p>
+      </div>
+      
+      <div v-if="error" class="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm mb-4">
         {{ error }}
       </div>
+      
+      <form @submit.prevent="submitForm" class="space-y-4">
+        <!-- First Name and Last Name in 2 columns -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="given_name" class="block text-sm font-medium text-zinc-400 mb-1">First Name</label>
+            <input 
+              id="given_name" 
+              v-model="formData.given_name" 
+              type="text" 
+              required
+              class="w-full px-3 py-2 bg-zinc-800/50 border border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-white"
+            />
+          </div>
+          <div>
+            <label for="family_name" class="block text-sm font-medium text-zinc-400 mb-1">Last Name</label>
+            <input 
+              id="family_name" 
+              v-model="formData.family_name" 
+              type="text" 
+              required
+              class="w-full px-3 py-2 bg-zinc-800/50 border border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-white"
+            />
+          </div>
+        </div>
+        
+        <!-- Phone Number -->
+        <div>
+          <label for="phone_number" class="block text-sm font-medium text-zinc-400 mb-1">Mobile Number</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-500">+</span>
+            <input 
+              id="phone_number" 
+              v-model="formData.phone_number" 
+              type="tel" 
+              required
+              placeholder="1234567890 (no spaces or dashes)"
+              class="w-full pl-7 pr-3 py-2 bg-zinc-800/50 border border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-white"
+            />
+          </div>
+          <p class="text-xs text-zinc-500 mt-1">Format: Country code + number (e.g., 12025550123)</p>
+        </div>
+        
+        <!-- Email (readonly) -->
+        <div>
+          <label for="email" class="block text-sm font-medium text-zinc-400 mb-1">Email Address</label>
+          <input 
+            id="email" 
+            v-model="formData.email" 
+            type="email" 
+            readonly
+            class="w-full px-3 py-2 bg-zinc-800/80 border border-zinc-700 rounded-md text-zinc-400 cursor-not-allowed"
+          />
+        </div>
+        
+        <!-- Gender Selection -->
+        <div>
+          <label class="block text-sm font-medium text-zinc-400 mb-1">Gender</label>
+          <div class="flex space-x-4">
+            <label class="inline-flex items-center">
+              <input type="radio" v-model="formData.gender" value="Male" class="form-radio text-blue-500" />
+              <span class="ml-2 text-zinc-300">Male</span>
+            </label>
+            <label class="inline-flex items-center">
+              <input type="radio" v-model="formData.gender" value="Female" class="form-radio text-blue-500" />
+              <span class="ml-2 text-zinc-300">Female</span>
+            </label>
+          </div>
+        </div>
+        
+        <!-- Marketing Consent -->
+        <div class="flex items-start">
+          <div class="flex items-center h-5">
+            <input 
+              id="marketing" 
+              v-model="formData.accepts_marketing" 
+              type="checkbox"
+              class="h-4 w-4 text-blue-600 border-zinc-700 rounded focus:ring-blue-500 focus:ring-offset-zinc-800"
+            />
+          </div>
+          <div class="ml-3 text-sm">
+            <label for="marketing" class="text-zinc-300">I agree to receive marketing communications</label>
+          </div>
+        </div>
+        
+        <div class="pt-2">
+          <button 
+            type="submit" 
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md transition duration-200 flex items-center justify-center"
+            :disabled="isSubmitting"
+          >
+            <span v-if="isSubmitting" class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+            {{ isSubmitting ? 'Updating Profile...' : 'Complete Profile' }}
+          </button>
+        </div>
+      </form>
     </AuthCard>
     
     <!-- Consent Screen Modal -->
@@ -127,7 +112,7 @@
       v-if="showConsentScreen"
       :applicationId="applicationName"
       :applicationName="applicationName"
-      :idToken="userTokens?.id_token"
+      :idToken="idToken"
       @approved="handleConsentApproved"
       @denied="handleConsentDenied"
       @error="handleConsentError"
@@ -136,196 +121,237 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
-import AuthBackground from '../components/ui/AuthBackground.vue'
-import AuthCard from '../components/ui/AuthCard.vue'
-import AuthButton from '../components/ui/AuthButton.vue'
-import { PhoneIcon, ArrowRightIcon, CheckIcon, UserIcon, MailIcon } from 'lucide-vue-next'
-import ConsentScreen from '../components/ConsentScreen.vue'
-import { useApi } from '../composables/useApi'
+import { fetchUserAttributes } from 'aws-amplify/auth'
+import authService, { type UserAttributes } from '@/services/authService'
+import { useApi } from '@/composables/useApi'
+import AuthBackground from '@/components/ui/AuthBackground.vue'
+import AuthCard from '@/components/ui/AuthCard.vue'
+import ConsentScreen from '@/components/ConsentScreen.vue'
 
-// Route and router
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const api = useApi()
 
+const error = ref('')
+const isSubmitting = ref(false)
+const showConsentScreen = ref(false)
+const idToken = ref('')
+const applicationName = ref(route.query.application_name as string || '')
+const channelId = ref(route.query.channel_id as string || '')
+const redirectUrl = ref(route.query.redirect_url as string || '/')
+
 // Form data
-const formData = ref({
-  phone: '',
-  accepts_marketing: false,
-  email: '',
+const formData = reactive({
   given_name: '',
-  family_name: ''
+  family_name: '',
+  phone_number: '',
+  email: '',
+  gender: 'Male',
+  accepts_marketing: false
 })
 
-// Phone number handling with country code
-const phoneWithoutCode = ref('')
-
-// State
-const loading = ref(false)
-const error = ref('')
-const errors = ref<Record<string, string>>({})
-
-// Consent screen state
-const showConsentScreen = ref(false)
-const userTokens = ref<any>(null)
-
-// Get query parameters
-const applicationName = ref(route.query.application_name as string || import.meta.env.VITE_DEFAULT_APPLICATION_NAME)
-const channelId = ref(route.query.channel_id as string || import.meta.env.VITE_DEFAULT_CHANNEL_ID)
-const redirectUrl = ref(route.query.redirect_url as string || import.meta.env.VITE_DEFAULT_REDIRECT_URL)
-
-// Update full phone number when phoneWithoutCode changes
-const validatePhone = () => {
-  const phoneRegex = /^\d{10}$/
-  const cleanPhone = phoneWithoutCode.value.replace(/\D/g, '')
-  
-  if (!cleanPhone) {
-    errors.value.phone = 'Phone number is required'
-  } else if (!phoneRegex.test(cleanPhone)) {
-    errors.value.phone = 'Please enter a valid 10-digit phone number'
-  } else {
-    delete errors.value.phone
-    formData.value.phone = `+63${cleanPhone}`
+// Function to load user data
+const loadUserData = async () => {
+  try {
+    // In Amplify v6, we need to fetch attributes separately
+    const attributes = await fetchUserAttributes()
+    
+    // Pre-fill form with existing user data
+    formData.given_name = attributes.given_name || route.query.given_name as string || ''
+    formData.family_name = attributes.family_name || route.query.family_name as string || ''
+    formData.phone_number = attributes.phone_number || ''
+    formData.email = attributes.email || route.query.email as string || ''
+    
+    // If phone number is the placeholder, clear it
+    if (formData.phone_number === '+00000000000') {
+      formData.phone_number = ''
+    }
+  } catch (error: any) {
+    console.error('Error loading user data:', error)
+    toast.error('Failed to load user data')
   }
 }
 
-// Check if form is valid
-const isFormValid = computed(() => {
-  validatePhone()
-  return Object.keys(errors.value).length === 0
-})
-
-// --- Token handling and user info extraction ---
-onMounted(() => {
-  // Get token nonce from query params
-  const tokenNonce = route.query.token_nonce as string
-  
-  // Check for query params first (from AuthCallback)
-  if (route.query.email) {
-    formData.value.email = route.query.email as string
-  }
-  if (route.query.given_name) {
-    formData.value.given_name = route.query.given_name as string
-  }
-  if (route.query.family_name) {
-    formData.value.family_name = route.query.family_name as string
-  }
-  
-  // Retrieve tokens from localStorage
-  if (tokenNonce) {
-    const tokensRaw = localStorage.getItem(`temp_oauth_tokens_${tokenNonce}`)
-    if (tokensRaw) {
-      try {
-        const tokens = JSON.parse(tokensRaw)
-        userTokens.value = tokens
-        
-        // Decode id_token to get user info if not already set from query params
-        const payload = JSON.parse(atob(tokens.id_token.split('.')[1]))
-        console.log('Decoded ID token payload:', payload)
-        
-        // Fill in any missing user info from the token
-        if (!formData.value.email && payload.email) {
-          formData.value.email = payload.email
-        }
-        if (!formData.value.given_name && payload.given_name) {
-          formData.value.given_name = payload.given_name
-        }
-        if (!formData.value.family_name && payload.family_name) {
-          formData.value.family_name = payload.family_name
-        }
-      } catch (err) {
-        console.error('Error decoding tokens:', err)
-        error.value = 'Failed to load authentication tokens.'
-      }
-    } else {
-      error.value = 'Authentication tokens not found. Please try logging in again.'
-    }
-  } else {
-    error.value = 'No authentication token reference found.'
-  }
-})
-
-// Submit form
-const submitForm = async () => {
-  validatePhone()
-  if (!isFormValid.value) {
-    return
-  }
-  loading.value = true
-  error.value = ''
+onMounted(async () => {
   try {
-    if (!userTokens.value) {
-      throw new Error('No authentication tokens available.')
+    // Get current authenticated user and session
+    const user = await authService.getCurrentUser()
+    const session = await authService.getCurrentSession()
+    
+    if (!user || !session) {
+      error.value = 'Authentication error. Please try logging in again.'
+      return
     }
     
-    // Prepare user attributes to update
-    const userAttributes = {
-      phone_number: formData.value.phone,
-      'custom:needs_profile_completion': 'false', // Remove the profile completion flag
-      'custom:accepts_marketing': formData.value.accepts_marketing ? 'true' : 'false'
+    // Store the ID token for later use
+    idToken.value = session.idToken
+    
+    // Load user data and fetch attributes
+    await loadUserData()
+    
+    try {
+      // In Amplify v6, we need to fetch attributes separately
+      const userAttributes = await fetchUserAttributes()
+      
+      // Pre-fill gender if available
+      if (userAttributes['custom:gender']) {
+        formData.gender = userAttributes['custom:gender']
+      }
+      
+      // Pre-fill marketing preference if available
+      if (userAttributes['custom:accepts_marketing'] === 'true') {
+        formData.accepts_marketing = true
+      }
+      
+      console.log('User attributes loaded:', userAttributes)
+      console.log('Form data initialized:', formData)
+    } catch (attrError) {
+      console.error('Error fetching user attributes:', attrError)
+    }
+  } catch (err) {
+    console.error('Error initializing profile form:', err)
+    error.value = 'Failed to load your profile information. Please try logging in again.'
+  }
+})
+
+// Form submission
+const submitForm = async () => {
+  try {
+    isSubmitting.value = true
+    error.value = ''
+    
+    // Validate phone number format
+    if (!formData.phone_number.startsWith('+')) {
+      formData.phone_number = '+' + formData.phone_number
     }
     
-    console.log('Updating user profile with attributes:', userAttributes)
+    // Validate phone number
+    if (!/^\+[1-9]\d{6,14}$/.test(formData.phone_number)) {
+      throw new Error('Please enter a valid phone number with country code')
+    }
     
-    // Call API to update user attributes
-    const updated = await api.updateUserProfile(userAttributes, userTokens.value)
-    if (!updated) throw new Error('Profile update failed.')
+    // Prepare attributes to update
+    const attributesToUpdate: UserAttributes = {
+      phone_number: formData.phone_number,
+      'custom:gender': formData.gender,
+      'custom:accepts_marketing': formData.accepts_marketing ? 'true' : 'false',
+      'custom:needs_profile_completion': 'false' // Remove the profile completion flag
+    }
     
-    // Remove tokens from localStorage after use
-    const tokenNonce = route.query.token_nonce as string
-    if (tokenNonce) localStorage.removeItem(`temp_oauth_tokens_${tokenNonce}`)
+    console.log('Updating user attributes:', attributesToUpdate)
     
-    // Show success message
+    // Update user attributes using Amplify
+    const success = await authService.updateUserAttributes(attributesToUpdate)
+    
+    if (!success) {
+      throw new Error('Failed to update profile')
+    }
+    
+    console.log('Profile updated successfully')
     toast.success('Profile updated successfully!')
     
-    // Show consent screen
-    showConsentScreen.value = true
-  } catch (e: any) {
-    console.error('Profile update error:', e)
-    error.value = e.message || 'Failed to update profile'
-    loading.value = false
+    // Check if user is authorized for this application
+    const session = await authService.getCurrentSession()
+    if (!session) {
+      throw new Error('Failed to get authentication session')
+    }
+    
+    const authCheck = await api.checkAppUser(session.idToken, applicationName.value)
+    
+    if (!authCheck || !authCheck.authorized) {
+      // Show consent screen
+      showConsentScreen.value = true
+    } else {
+      // User is already authorized - redirect to application
+      handleRedirect()
+    }
+  } catch (err: any) {
+    console.error('Error updating profile:', err)
+    error.value = err.message || 'Failed to update profile. Please try again.'
+    toast.error('Failed to update profile')
+  } finally {
+    isSubmitting.value = false
   }
 }
 
 // Consent screen handlers
-const handleConsentApproved = async (scopes: string[]) => {
+const handleConsentApproved = async () => {
   try {
-    loading.value = true
     showConsentScreen.value = false
     
-    // Small delay to simulate authorization record creation
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    // Show success message
-    toast.success('Profile completed successfully!')
-    
-    // Redirect to the client application
-    if (redirectUrl.value) {
-      window.location.href = redirectUrl.value
-    } else {
-      router.push({ name: 'login' })
+    // Get current session
+    const session = await authService.getCurrentSession()
+    if (!session) {
+      throw new Error('Failed to get authentication session')
     }
+    
+    // Create app-user relationship
+    await api.authorizeApplication({
+      application_id: applicationName.value,
+      granted_scopes: ['profile', 'orders'],
+      action: 'approve'
+    }, session.idToken)
+    
+    // Redirect to application
+    handleRedirect()
   } catch (err: any) {
+    console.error('Error during consent approval:', err)
     error.value = err.message || 'Authorization failed'
-    loading.value = false
   }
 }
 
 const handleConsentDenied = () => {
   showConsentScreen.value = false
-  error.value = 'You must authorize the application to continue'
-  loading.value = false
+  error.value = 'You declined to authorize this application.'
 }
 
-const handleConsentError = (errorMessage: string) => {
+const handleConsentError = (err: string) => {
   showConsentScreen.value = false
-  error.value = errorMessage || 'An error occurred during authorization'
-  loading.value = false
+  error.value = err || 'An error occurred during authorization.'
 }
 
-// This onMounted is now handled in the main onMounted function above
+// Handle redirect to application
+const handleRedirect = async () => {
+  try {
+    // Get current session
+    const session = await authService.getCurrentSession()
+    if (!session) {
+      throw new Error('Failed to get authentication session')
+    }
+    
+    // Create session with the tokens
+    const sessionResponse = await api.initSession(
+      {
+        id_token: session.idToken,
+        access_token: session.accessToken,
+        refresh_token: session.refreshToken
+      },
+      applicationName.value
+    )
+    
+    // Show success toast
+    toast.success('Profile completed successfully!')
+    
+    // Redirect back to client app with session_id
+    if (sessionResponse && sessionResponse.session_id) {
+      // Short delay to allow toast to be seen
+      setTimeout(() => {
+        window.location.href = `${redirectUrl.value}?session_id=${sessionResponse.session_id}`
+      }, 1000)
+    } else {
+      throw new Error('Failed to create session')
+    }
+  } catch (err: any) {
+    console.error('Error during redirect:', err)
+    error.value = err.message || 'Failed to initialize session'
+  }
+}
 </script>
+
+<style scoped>
+/* Add any custom styles here */
+</style>
