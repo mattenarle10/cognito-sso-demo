@@ -37,6 +37,16 @@ const router = createRouter({
       name: 'sessions',
       component: () => import('../pages/SessionsPage.vue')
     },
+    {
+      path: '/auth/callback',
+      name: 'AuthCallback',
+      component: () => import('../pages/AuthCallback.vue'),
+    },
+    {
+      path: '/complete-profile',
+      name: 'CompleteProfile',
+      component: () => import('@/pages/CompleteProfilePage.vue'),
+    }
   ],
 })
 

@@ -42,6 +42,7 @@
           </template>
         </AuthInput>
 
+
         <!-- Error message -->
         <div v-if="error" class="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm">
           {{ error }}
@@ -57,9 +58,22 @@
           >
             Login
             <ArrowRightIcon :size="16" class="ml-1 transition-transform duration-200" />
-          </AuthButton>
-        </div>
+          </AuthButton>   
+        </div> 
       </form>
+      
+          <!-- Divider with text -->
+  <div class="flex items-center my-6">
+    <div class="flex-grow border-t border-zinc-700/40"></div>
+    <span class="mx-4 text-zinc-500 text-xs uppercase tracking-widest">or continue with</span>
+    <div class="flex-grow border-t border-zinc-700/40"></div>
+  </div>
+
+  <!-- Google Login Button centered -->
+  <div class="flex justify-center">
+    <GoogleLoginButton />
+  </div>
+
 
       <!-- Footer with enhanced styling -->
       <div class="mt-6 pt-5 border-t border-zinc-800/50 relative">
@@ -92,6 +106,7 @@
 </template>
 
 <script setup lang="ts">
+import GoogleLoginButton from '../components/ui/GoogleLoginButton.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { MailIcon, LockIcon, ArrowRightIcon } from 'lucide-vue-next'
