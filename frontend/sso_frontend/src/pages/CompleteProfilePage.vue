@@ -1,7 +1,67 @@
 <template>
   <AuthBackground>
-    <AuthCard title="Complete Your Profile" subtitle="Please provide your phone number to complete your profile">
+    <AuthCard title="Complete Your Profile" subtitle="Please provide the missing information to complete your profile">
       <form @submit.prevent="submitForm" class="mt-6">
+        <!-- First Name and Last Name (Two columns) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <!-- First Name -->
+          <div>
+            <label for="firstName" class="text-zinc-300 font-medium tracking-wide text-xs block flex items-center gap-2 mb-1.5">
+              <UserIcon :size="14" class="text-zinc-500" />
+              First Name
+            </label>
+            <div class="relative">
+              <input
+                id="firstName"
+                type="text"
+                v-model="formData.given_name"
+                placeholder="First Name"
+                readonly
+                class="bg-zinc-900/60 border border-zinc-700/60 text-white placeholder:text-zinc-500 focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 h-10 rounded-lg font-light tracking-wide text-sm transition-all duration-200 px-3 relative w-full opacity-70"
+              />
+              <div class="absolute inset-0 bg-gradient-to-r from-zinc-800/5 to-transparent rounded-lg pointer-events-none" />
+            </div>
+          </div>
+          
+          <!-- Last Name -->
+          <div>
+            <label for="lastName" class="text-zinc-300 font-medium tracking-wide text-xs block flex items-center gap-2 mb-1.5">
+              <UserIcon :size="14" class="text-zinc-500" />
+              Last Name
+            </label>
+            <div class="relative">
+              <input
+                id="lastName"
+                type="text"
+                v-model="formData.family_name"
+                placeholder="Last Name"
+                readonly
+                class="bg-zinc-900/60 border border-zinc-700/60 text-white placeholder:text-zinc-500 focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 h-10 rounded-lg font-light tracking-wide text-sm transition-all duration-200 px-3 relative w-full opacity-70"
+              />
+              <div class="absolute inset-0 bg-gradient-to-r from-zinc-800/5 to-transparent rounded-lg pointer-events-none" />
+            </div>
+          </div>
+        </div>
+        
+        <!-- Email Address (Full width) -->
+        <div class="mb-4">
+          <label for="email" class="text-zinc-300 font-medium tracking-wide text-xs block flex items-center gap-2 mb-1.5">
+            <MailIcon :size="14" class="text-zinc-500" />
+            Email Address
+          </label>
+          <div class="relative">
+            <input
+              id="email"
+              type="email"
+              v-model="formData.email"
+              placeholder="Email Address"
+              readonly
+              class="bg-zinc-900/60 border border-zinc-700/60 text-white placeholder:text-zinc-500 focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 h-10 rounded-lg font-light tracking-wide text-sm transition-all duration-200 px-3 relative w-full opacity-70"
+            />
+            <div class="absolute inset-0 bg-gradient-to-r from-zinc-800/5 to-transparent rounded-lg pointer-events-none" />
+          </div>
+        </div>
+        
         <!-- Phone Number (Full width) -->
         <div class="mb-4">
           <label for="phone" class="text-zinc-300 font-medium tracking-wide text-xs block flex items-center gap-2 mb-1.5">
@@ -82,7 +142,7 @@ import { useToast } from 'vue-toastification'
 import AuthBackground from '../components/ui/AuthBackground.vue'
 import AuthCard from '../components/ui/AuthCard.vue'
 import AuthButton from '../components/ui/AuthButton.vue'
-import { PhoneIcon, ArrowRightIcon, CheckIcon } from 'lucide-vue-next'
+import { PhoneIcon, ArrowRightIcon, CheckIcon, UserIcon, MailIcon } from 'lucide-vue-next'
 import ConsentScreen from '../components/ConsentScreen.vue'
 import { useApi } from '../composables/useApi'
 
@@ -95,7 +155,10 @@ const api = useApi()
 // Form data
 const formData = ref({
   phone: '',
-  accepts_marketing: false
+  accepts_marketing: false,
+  email: '',
+  given_name: '',
+  family_name: ''
 })
 
 // Phone number handling with country code
@@ -136,42 +199,93 @@ const isFormValid = computed(() => {
   return Object.keys(errors.value).length === 0
 })
 
+// --- Token handling and user info extraction ---
+onMounted(() => {
+  // Get token nonce from query params
+  const tokenNonce = route.query.token_nonce as string
+  
+  // Check for query params first (from AuthCallback)
+  if (route.query.email) {
+    formData.value.email = route.query.email as string
+  }
+  if (route.query.given_name) {
+    formData.value.given_name = route.query.given_name as string
+  }
+  if (route.query.family_name) {
+    formData.value.family_name = route.query.family_name as string
+  }
+  
+  // Retrieve tokens from localStorage
+  if (tokenNonce) {
+    const tokensRaw = localStorage.getItem(`temp_oauth_tokens_${tokenNonce}`)
+    if (tokensRaw) {
+      try {
+        const tokens = JSON.parse(tokensRaw)
+        userTokens.value = tokens
+        
+        // Decode id_token to get user info if not already set from query params
+        const payload = JSON.parse(atob(tokens.id_token.split('.')[1]))
+        console.log('Decoded ID token payload:', payload)
+        
+        // Fill in any missing user info from the token
+        if (!formData.value.email && payload.email) {
+          formData.value.email = payload.email
+        }
+        if (!formData.value.given_name && payload.given_name) {
+          formData.value.given_name = payload.given_name
+        }
+        if (!formData.value.family_name && payload.family_name) {
+          formData.value.family_name = payload.family_name
+        }
+      } catch (err) {
+        console.error('Error decoding tokens:', err)
+        error.value = 'Failed to load authentication tokens.'
+      }
+    } else {
+      error.value = 'Authentication tokens not found. Please try logging in again.'
+    }
+  } else {
+    error.value = 'No authentication token reference found.'
+  }
+})
+
 // Submit form
 const submitForm = async () => {
   validatePhone()
-  
   if (!isFormValid.value) {
     return
   }
-  
   loading.value = true
   error.value = ''
-  
   try {
+    if (!userTokens.value) {
+      throw new Error('No authentication tokens available.')
+    }
+    
     // Prepare user attributes to update
     const userAttributes = {
       phone_number: formData.value.phone,
-      accepts_marketing: formData.value.accepts_marketing ? 'true' : 'false'
+      'custom:needs_profile_completion': 'false', // Remove the profile completion flag
+      'custom:accepts_marketing': formData.value.accepts_marketing ? 'true' : 'false'
     }
+    
+    console.log('Updating user profile with attributes:', userAttributes)
     
     // Call API to update user attributes
-    // For now, we'll just simulate a successful update
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const updated = await api.updateUserProfile(userAttributes, userTokens.value)
+    if (!updated) throw new Error('Profile update failed.')
     
-    // For first-time users, show consent screen
-    // In a real implementation, you would check if this is the user's first login
-    // For this demo, we'll always show the consent screen
+    // Remove tokens from localStorage after use
+    const tokenNonce = route.query.token_nonce as string
+    if (tokenNonce) localStorage.removeItem(`temp_oauth_tokens_${tokenNonce}`)
+    
+    // Show success message
+    toast.success('Profile updated successfully!')
+    
+    // Show consent screen
     showConsentScreen.value = true
-    
-    // Simulate having tokens from the OAuth flow
-    userTokens.value = {
-      id_token: 'simulated-id-token',
-      access_token: 'simulated-access-token',
-      refresh_token: 'simulated-refresh-token'
-    }
-    
-    // Don't redirect yet - wait for consent screen interaction
   } catch (e: any) {
+    console.error('Profile update error:', e)
     error.value = e.message || 'Failed to update profile'
     loading.value = false
   }
@@ -213,10 +327,5 @@ const handleConsentError = (errorMessage: string) => {
   loading.value = false
 }
 
-onMounted(() => {
-  // Pre-fill email if provided
-  if (route.query.email) {
-    // We're not using email in this minimal version
-  }
-})
+// This onMounted is now handled in the main onMounted function above
 </script>

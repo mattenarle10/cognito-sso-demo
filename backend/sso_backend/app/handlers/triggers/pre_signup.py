@@ -62,6 +62,14 @@ def handler(event, context):
             user_email = event["request"]["userAttributes"]["email"]
             print(f"Social login with email: {user_email}")
             
+            # Set a placeholder phone number if not provided
+            if "phone_number" not in event["request"]["userAttributes"] or not event["request"]["userAttributes"]["phone_number"]:
+                print("Phone number not provided, setting placeholder")
+                event["request"]["userAttributes"]["phone_number"] = "+00000000000"
+                # Mark user as needing profile completion
+                event["request"]["userAttributes"]["custom:needs_profile_completion"] = "true"
+                print("User marked as needing profile completion")
+            
             # Check if there's an existing user with this email
             existing_user = user_repository.find_user_by_email(user_email)
             

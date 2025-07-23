@@ -120,6 +120,44 @@ onMounted(async () => {
     const { access_token, id_token, refresh_token } = resp.data
     tokens.value = { access_token, id_token, refresh_token }
     
+    // Decode the ID token to check for custom attributes
+    const payload = JSON.parse(atob(id_token.split('.')[1]))
+    console.log('ID token payload:', payload)
+    
+    // Check if user needs profile completion (from our pre_signup Lambda trigger)
+    if (payload['custom:needs_profile_completion'] === 'true') {
+      console.log('User needs profile completion')
+      // Generate a nonce for secure token storage
+      const nonce = Math.random().toString(36).substring(2) + Date.now()
+      
+      // Store tokens in localStorage with the nonce
+      localStorage.setItem(`temp_oauth_tokens_${nonce}`, JSON.stringify(tokens.value))
+      
+      // Extract user info for pre-filling the profile form
+      const userInfo = {
+        email: payload.email || '',
+        given_name: payload.given_name || '',
+        family_name: payload.family_name || ''
+      }
+      
+      // Redirect to complete profile with nonce and user info
+      router.replace({ 
+        name: 'CompleteProfile',
+        query: {
+          required_attributes: 'phone_number',
+          application_name: appName.value,
+          channel_id: channelId.value,
+          redirect_url: route.query.redirect_url as string,
+          token_nonce: nonce,
+          // Pass user info in query params
+          email: userInfo.email,
+          given_name: userInfo.given_name,
+          family_name: userInfo.family_name
+        }
+      })
+      return
+    }
+    
     // Check if user is authorized for this application
     const authCheck = await api.checkAppUser(id_token, appName.value)
     
@@ -139,17 +177,28 @@ onMounted(async () => {
     
     // Check if the error is related to missing attributes
     if (errorMsg.includes('attributes required') && errorMsg.includes('phone_number')) {
-      // Redirect to complete profile with required attributes and parameters
-      router.replace({ 
-        name: 'CompleteProfile',
-        query: {
-          required_attributes: 'phone_number',
-          application_name: appName.value,
-          channel_id: channelId.value,
-          redirect_url: route.query.redirect_url as string,
-          email: route.query.email as string || ''
-        }
-      })
+      // If we have tokens, store them in localStorage with a nonce
+      if (tokens.value) {
+        const nonce = Math.random().toString(36).substring(2) + Date.now();
+        localStorage.setItem(`temp_oauth_tokens_${nonce}`, JSON.stringify(tokens.value));
+        // Redirect to complete profile with nonce in query
+        router.replace({ 
+          name: 'CompleteProfile',
+          query: {
+            required_attributes: 'phone_number',
+            application_name: appName.value,
+            channel_id: channelId.value,
+            redirect_url: route.query.redirect_url as string,
+            email: route.query.email as string || '',
+            token_nonce: nonce
+          }
+        })
+        return;
+      }
+      // If no tokens, fallback to error
+      error.value = 'Could not retrieve authentication tokens for profile completion.';
+      loading.value = false;
+      return;
     } else {
       error.value = 'Failed to sign in with Google. ' + errorMsg
       loading.value = false

@@ -73,7 +73,9 @@ class UserProfileDomain:
         allowed_fields = {
             'name': self._validate_name,
             'phone_number': self._validate_phone_number,
-            'gender': self._validate_gender
+            'gender': self._validate_gender,
+            'custom:needs_profile_completion': self._validate_boolean_string,
+            'custom:accepts_marketing': self._validate_boolean_string
         }
         
         validated_updates = {}
@@ -134,6 +136,18 @@ class UserProfileDomain:
             raise ValueError(f"Gender must be one of: {', '.join(allowed_genders)}")
         
         return gender
+    
+    def _validate_boolean_string(self, value):
+        """Validate boolean string field (for custom attributes)"""
+        if not isinstance(value, str):
+            raise ValueError("Boolean string must be a string value")
+            
+        value = value.strip().lower()
+        
+        if value not in ['true', 'false']:
+            raise ValueError("Boolean string must be 'true' or 'false'")
+            
+        return value
     
     def _sync_to_dynamodb(self, user_id, updates):
         """
