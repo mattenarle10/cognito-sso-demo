@@ -10,11 +10,13 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRoute } from 'vue-router'
-import authService from '@/services/authService'
+import { useRoute, useRouter } from 'vue-router'
+import { AuthService } from '@/services/authService'
 import { useToast } from 'vue-toastification'
 
 const route = useRoute()
+const router = useRouter()
+const authService = new AuthService()
 const toast = useToast()
 const isLoading = ref(false)
 
@@ -30,11 +32,26 @@ const loginWithGoogle = async () => {
     console.log('Application:', appName)
     console.log('Channel:', channelId)
     
+    // Check if user is already signed in
+    try {
+      const currentUser = await authService.getCurrentUser()
+      if (currentUser) {
+        console.log('User already signed in, redirecting...')
+        // Redirect to dashboard or original destination
+        const redirectUrl = route.query.redirect_url as string
+        if (redirectUrl) {
+          window.location.href = redirectUrl
+        } else {
+          router.push('/dashboard')
+        }
+        return
+      }
+    } catch (e) {
+      // Not signed in, proceed with Google login
+    }
+    
     // Use Amplify's federated sign-in with Google
     await authService.signInWithGoogle()
-    
-    // The page will be redirected to Google's login page
-    // Amplify will handle the callback and token exchange
   } catch (error) {
     console.error('Error during Google login:', error)
     toast.error('Failed to sign in with Google. Please try again.')

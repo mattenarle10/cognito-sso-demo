@@ -52,7 +52,7 @@ def handler(event, context):
 
         # Handle social provider signup (Google, Facebook, etc.)
         if event["triggerSource"] == "PreSignUp_ExternalProvider":
-            logger.info('Social login detected')
+            print('Social login detected')
             
             # Auto-confirm and auto-verify the user
             event['response']['autoConfirmUser'] = True
@@ -70,11 +70,11 @@ def handler(event, context):
                 print(f"[PreSignUp] Phone number present: {phone_number}")
             
             # Log all user attributes for debugging
-            logger.info(f"User attributes after modification: {event['request']['userAttributes']}")
+            print(f"User attributes after modification: {event['request']['userAttributes']}")
             
             # Extract identity provider information
             provider = event['request'].get('userAttributes', {}).get('identities')
-            logger.info(f'Identity provider info: {provider}')
+            print(f'Identity provider info: {provider}')
             
             # Extract email from user attributes
             user_email = event["request"]["userAttributes"]["email"]

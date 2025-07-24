@@ -47,10 +47,18 @@ const channelId = ref('')
 // Function to handle successful authentication
 const handleSuccessfulAuth = async () => {
   try {
-    // Get the current session with tokens
+    // After OAuth redirect, Amplify should have processed the callback
+    // Get the current session which now includes OAuth tokens
     const tokens = await authService.getCurrentSession()
     if (!tokens) {
-      throw new Error('Failed to get authentication tokens')
+      console.log('Waiting for OAuth tokens to be processed...')
+      // Retry after a brief moment
+      await new Promise(resolve => setTimeout(resolve, 500))
+      const retryTokens = await authService.getCurrentSession()
+      if (!retryTokens) {
+        throw new Error('Failed to get authentication tokens after OAuth')
+      }
+      return retryTokens
     }
 
     // Check if user needs to complete their profile
@@ -98,8 +106,26 @@ const handleSuccessfulAuth = async () => {
     // Get redirect URL from query params or use default
     const redirectUrl = route.query.redirect_url as string || '/'
     
-    // Redirect to the application
-    window.location.href = redirectUrl
+    // If redirecting to client app, include auth tokens
+    if (redirectUrl.includes('8080') || redirectUrl.includes('client')) {
+      // Build redirect URL with tokens for client app
+      const tokenParams = new URLSearchParams({
+        access_token: tokens.accessToken,
+        id_token: tokens.idToken,
+        refresh_token: tokens.refreshToken || '',
+        expires_in: '3600' // 1 hour
+      })
+      
+      const finalRedirectUrl = redirectUrl.includes('?') 
+        ? `${redirectUrl}&${tokenParams.toString()}`
+        : `${redirectUrl}?${tokenParams.toString()}`
+      
+      console.log('Redirecting to client app with tokens:', finalRedirectUrl)
+      window.location.href = finalRedirectUrl
+    } else {
+      // Standard redirect
+      window.location.href = redirectUrl
+    }
   } catch (err: any) {
     console.error('Error during authentication:', err)
     error.value = err.message || 'Failed to process your login. Please try again.'

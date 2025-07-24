@@ -20,6 +20,13 @@ export class AuthService {
    */
   async signInWithGoogle(): Promise<void> {
     try {
+      // Check if user is already signed in
+      const currentUser = await this.getCurrentUser();
+      if (currentUser) {
+        console.log('User already signed in, redirecting to dashboard');
+        return;
+      }
+      
       await signInWithRedirect({ provider: 'Google' });
     } catch (err: any) {
       console.error('Error signing in with Google:', err);
