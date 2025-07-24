@@ -1,4 +1,13 @@
 import json
+import decimal
+from decimal import Decimal
+
+# Custom JSON encoder to handle Decimal objects
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super(DecimalEncoder, self).default(obj)
 
 def format_response(status_code, body):
     """
@@ -18,7 +27,7 @@ def format_response(status_code, body):
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Credentials': True
         },
-        'body': json.dumps(body)
+        'body': json.dumps(body, cls=DecimalEncoder)
     }
 
 def success_response(data=None, message=None):

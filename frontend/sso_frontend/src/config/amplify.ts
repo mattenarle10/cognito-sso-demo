@@ -26,7 +26,8 @@ export const configureAmplify = () => {
             scopes: ['email', 'profile', 'openid', 'phone'],
             redirectSignIn: [`${window.location.origin}/auth/callback`],
             redirectSignOut: [`${window.location.origin}/`],
-            responseType: 'code'
+            responseType: 'code',
+            providers: ['Google']
           }
         }
       }

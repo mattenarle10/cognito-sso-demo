@@ -74,6 +74,7 @@ class UserProfileDomain:
             'name': self._validate_name,
             'phone_number': self._validate_phone_number,
             'gender': self._validate_gender,
+            'custom:gender': self._validate_gender,  # Allow custom:gender attribute
             'custom:needs_profile_completion': self._validate_boolean_string,
             'custom:accepts_marketing': self._validate_boolean_string
         }

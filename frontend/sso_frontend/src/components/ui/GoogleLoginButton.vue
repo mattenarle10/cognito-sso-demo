@@ -24,31 +24,28 @@ const loginWithGoogle = async () => {
   try {
     isLoading.value = true
     
-    // Get application name and channel ID from route params or query
-    const appName = route.params.application_name || route.query.application_name || ''
-    const channelId = route.params.channel_id || route.query.channel_id || ''
+    // Get application name and channel ID from route query OR use environment defaults
+    const appName = (route.query.application_name as string) || import.meta.env.VITE_DEFAULT_APPLICATION_NAME || ''
+    const channelId = (route.query.channel_id as string) || import.meta.env.VITE_DEFAULT_CHANNEL_ID || ''
+    const redirectUrl = route.query.redirect_url as string || ''
     
     console.log('Starting Google OAuth login flow with Amplify')
-    console.log('Application:', appName)
-    console.log('Channel:', channelId)
+    console.log('Application:', appName, '(from URL or env default)')
+    console.log('Channel:', channelId, '(from URL or env default)')
+    console.log('Redirect URL:', redirectUrl)
     
-    // Check if user is already signed in
-    try {
-      const currentUser = await authService.getCurrentUser()
-      if (currentUser) {
-        console.log('User already signed in, redirecting...')
-        // Redirect to dashboard or original destination
-        const redirectUrl = route.query.redirect_url as string
-        if (redirectUrl) {
-          window.location.href = redirectUrl
-        } else {
-          router.push('/dashboard')
-        }
-        return
-      }
-    } catch (e) {
-      // Not signed in, proceed with Google login
+    // Validate we have required parameters (should always have them now with env defaults)
+    if (!appName || !channelId) {
+      console.error('Missing required OAuth parameters even with env defaults:', { appName, channelId })
+      toast.error('OAuth configuration error. Please check environment variables.')
+      isLoading.value = false
+      return
     }
+    
+    // Store OAuth parameters in sessionStorage so they survive the OAuth redirect
+    if (appName) sessionStorage.setItem('oauth_application_name', String(appName))
+    if (channelId) sessionStorage.setItem('oauth_channel_id', String(channelId))
+    if (redirectUrl) sessionStorage.setItem('oauth_redirect_url', String(redirectUrl))
     
     // Use Amplify's federated sign-in with Google
     await authService.signInWithGoogle()

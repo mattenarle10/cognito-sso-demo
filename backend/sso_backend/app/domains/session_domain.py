@@ -71,7 +71,64 @@ class SessionDomain:
         returns:
             dict: session data with tokens, or none if not found/expired
         """
-        return self.session_repository.get_session(session_id)
+        from datetime import datetime, timedelta
+        import os
+        from services.aws.cognito_user_service import CognitoUserService
+        
+        # Get the session data
+        session = self.session_repository.get_session(session_id)
+        
+        if not session:
+            return None
+            
+        # Check if access token is expired or will expire soon (within 5 minutes)
+        try:
+            # If we have an expires_at field, use that to check expiration
+            expires_at = session.get('expires_at')
+            if expires_at:
+                expiry_time = datetime.fromisoformat(expires_at)
+                # If token expires within 5 minutes or is already expired
+                if datetime.now() + timedelta(minutes=5) > expiry_time:
+                    print(f"Access token for session {session_id} is expired or expiring soon. Attempting to refresh...")
+                    
+                    # Check if we have a refresh token
+                    refresh_token = session.get('refresh_token')
+                    if not refresh_token:
+                        print(f"No refresh token available for session {session_id}")
+                        return None
+                    
+                    # Initialize CognitoUserService if not already available
+                    cognito_service = CognitoUserService()
+                    
+                    try:
+                        # Refresh the tokens
+                        new_tokens = cognito_service.refresh_tokens(refresh_token)
+                        
+                        if new_tokens and new_tokens.get('access_token') and new_tokens.get('id_token'):
+                            # Calculate new expiration time (1 hour from now)
+                            new_expires_at = (datetime.now() + timedelta(hours=1)).isoformat()
+                            
+                            # Update session with new tokens
+                            session.update({
+                                'id_token': new_tokens.get('id_token'),
+                                'access_token': new_tokens.get('access_token'),
+                                'refresh_token': new_tokens.get('refresh_token', refresh_token),
+                                'expires_at': new_expires_at
+                            })
+                            
+                            # Update the session in DynamoDB
+                            self.session_repository.update_session_tokens(session_id, new_tokens, new_expires_at)
+                            
+                            print(f"Successfully refreshed tokens for session {session_id}")
+                        else:
+                            print(f"Failed to refresh tokens for session {session_id}: Invalid token response")
+                    except Exception as e:
+                        print(f"Error refreshing tokens for session {session_id}: {str(e)}")
+                        # If refresh fails, return the session anyway - let the client handle token issues
+        except Exception as e:
+            print(f"Error checking token expiration for session {session_id}: {str(e)}")
+        
+        return session
     
     def get_user_sessions(self, user_id, include_expired=False):
         """

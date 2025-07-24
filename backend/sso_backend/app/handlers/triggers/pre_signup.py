@@ -57,17 +57,24 @@ def handler(event, context):
             # Auto-confirm and auto-verify the user
             event['response']['autoConfirmUser'] = True
             event['response']['autoVerifyEmail'] = True
-            event['request']['userAttributes']['email_verified'] = 'true'
             
-            # Ensure phone_number is present and valid (for Google OAuth and other social)
-            phone_number = event['request']['userAttributes'].get('phone_number')
-            if not phone_number or str(phone_number).strip() == '':
-                print('[PreSignUp] Phone number missing or empty, setting placeholder for social login')
-                event['request']['userAttributes']['phone_number'] = '+00000000000'
-                event['request']['userAttributes']['custom:needs_profile_completion'] = 'true'
-                print('[PreSignUp] Added placeholder phone number and needs_profile_completion flag')
-            else:
-                print(f"[PreSignUp] Phone number present: {phone_number}")
+            # Set needs_profile_completion flag for all social logins
+            # This will ensure they're redirected to the profile completion page
+            event['request']['userAttributes']['custom:needs_profile_completion'] = 'true'
+            print('[PreSignUp] Added needs_profile_completion flag')
+            
+            # Log all user attributes for debugging
+            print(f"User attributes before modification: {event['request']['userAttributes']}")
+            
+            # Remove phone_number if it exists to force profile completion
+            if 'phone_number' in event['request']['userAttributes']:
+                print('[PreSignUp] Removing phone_number to ensure profile completion')
+                del event['request']['userAttributes']['phone_number']
+                
+            # Force email_verified to true for social logins
+            # This is critical for Google OAuth users
+            print('[PreSignUp] Setting email_verified to true')
+            event['response']['autoVerifyEmail'] = True
             
             # Log all user attributes for debugging
             print(f"User attributes after modification: {event['request']['userAttributes']}")

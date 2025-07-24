@@ -1,6 +1,8 @@
 import json
 import os
 import sys
+import decimal
+from decimal import Decimal
 
 # Add the parent directory to sys.path to allow importing from app modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))

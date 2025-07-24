@@ -1,136 +1,277 @@
 <template>
-  <div class="auth-callback">
-    <AuthBackground />
-    <div class="container">
-      <AuthCard>
-        <template #header>
-          <h1 class="text-center text-2xl font-bold mb-4">Authentication</h1>
-        </template>
-        
-        <div v-if="loading" class="loading flex flex-col items-center justify-center py-8">
-          <div class="spinner mb-4"></div>
-          <p class="text-gray-300">Processing your login...</p>
+  <AuthBackground>
+    <AuthCard>
+      <!-- Header -->
+      <div class="mb-8 text-center">
+        <h1 class="text-3xl font-bold tracking-tight mb-2">
+          <span class="bg-gradient-to-r from-gray-200 via-gray-100 to-gray-300 bg-clip-text text-transparent">
+            processing authentication
+          </span>
+        </h1>
+        <p class="text-zinc-500 text-sm">
+          setting up your grind account
+        </p>
+      </div>
+      
+      <!-- Loading State -->
+      <div v-if="loading" class="text-center py-8">
+        <div class="inline-block w-8 h-8 border-2 border-zinc-600 border-t-zinc-300 rounded-full animate-spin"></div>
+        <p class="mt-4 text-zinc-400">processing your google login...</p>
+      </div>
+      
+      <!-- Error State -->
+      <div v-else-if="error" class="text-center">
+        <div class="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm mb-6">
+          <h2 class="font-semibold mb-2">Authentication Error</h2>
+          <p class="text-zinc-300">{{ error }}</p>
         </div>
-        
-        <div v-else-if="error" class="error flex flex-col items-center justify-center py-4">
-          <div class="bg-red-900/30 p-4 rounded-lg mb-4 w-full">
-            <h2 class="text-red-400 font-semibold mb-2">Authentication Error</h2>
-            <p class="text-gray-300 mb-4">{{ error }}</p>
-          </div>
-          <button @click="goToLogin" class="btn-primary w-full">Return to Login</button>
-          
-          <!-- Special case for phone_number attribute error -->
+        <AuthButton @click="goToLogin" class="w-full">
+          return to login
+        </AuthButton>
+      </div>
+      
+      <!-- Success State (if needed) -->
+      <div v-else class="text-center py-8">
+        <div class="inline-block w-8 h-8 border-2 border-green-600 border-t-green-300 rounded-full animate-spin"></div>
+        <p class="mt-4 text-zinc-400">authentication successful, redirecting...</p>
+      </div>
+    </AuthCard>
 
-        </div>
-      </AuthCard>
-    </div>
-  </div>
+    <!-- Consent Screen Modal -->
+    <ConsentScreen 
+      v-if="showConsentScreen"
+      :application-id="appName"
+      :application-name="appName"
+      :id-token="userTokens?.id_token"
+      @approved="handleConsentApproved"
+      @denied="handleConsentDenied"
+      @error="handleConsentError"
+    />
+  </AuthBackground>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Hub } from 'aws-amplify/utils'
-import { fetchUserAttributes } from 'aws-amplify/auth'
-import authService from '@/services/authService'
-import { useApi } from '@/composables/useApi'
+import authService from '../services/authService'
+import { useApi } from '../composables/useApi'
+import ConsentScreen from '../components/ConsentScreen.vue'
+import { useToast } from 'vue-toastification'
+import AuthBackground from '../components/ui/AuthBackground.vue'
+import AuthCard from '../components/ui/AuthCard.vue'
+import AuthButton from '../components/ui/AuthButton.vue'
 
 const router = useRouter()
 const route = useRoute()
 const api = useApi()
+const toast = useToast()
 
 const loading = ref(true)
 const error = ref('')
 const appName = ref('')
 const channelId = ref('')
+const showConsentScreen = ref(false)
+const userTokens = ref<any>(null)
 
 // Function to handle successful authentication
 const handleSuccessfulAuth = async () => {
   try {
-    // After OAuth redirect, Amplify should have processed the callback
-    // Get the current session which now includes OAuth tokens
-    const tokens = await authService.getCurrentSession()
-    if (!tokens) {
-      console.log('Waiting for OAuth tokens to be processed...')
-      // Retry after a brief moment
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const retryTokens = await authService.getCurrentSession()
-      if (!retryTokens) {
-        throw new Error('Failed to get authentication tokens after OAuth')
+    // Get application info from OAuth custom state or fallback methods
+    let localAppName = ''
+    let localChannelId = ''
+    let localRedirectUrl = ''
+    
+    // First, try to get from OAuth custom state (new method)
+    try {
+      // Listen for custom OAuth state from Amplify Hub
+      const customStateStr = route.query.state as string
+      if (customStateStr) {
+        // OAuth state might contain our custom data
+        console.log('OAuth state received:', customStateStr)
       }
-      return retryTokens
+      
+      // Check if we have custom state in sessionStorage (set by Hub listener)
+      if (customStateStr) {
+        const parsed = JSON.parse(customStateStr)
+        localAppName = parsed.application_name || ''
+        localChannelId = parsed.channel_id || ''
+        localRedirectUrl = parsed.redirect_url || ''
+        console.log('Retrieved from custom state:', { appName: localAppName, channelId: localChannelId, redirectUrl: localRedirectUrl })
+      }
+    } catch (e) {
+      console.log('Failed to parse custom state:', e)
+    }
+    
+    // Second fallback: check route query parameters
+    if (!localAppName || !localChannelId) {
+      localAppName = route.query.application_name as string || ''
+      localChannelId = route.query.channel_id as string || ''
+      localRedirectUrl = route.query.redirect_url as string || ''
+    }
+    
+    // Final fallback: check sessionStorage
+    if (!localAppName || !localChannelId) {
+      localAppName = sessionStorage.getItem('oauth_application_name') || ''
+      localChannelId = sessionStorage.getItem('oauth_channel_id') || ''
+      localRedirectUrl = sessionStorage.getItem('oauth_redirect_url') || ''
+    }
+    
+    // Last resort: check if we're on a page with URL parameters (like LoginPage)
+    if (!localAppName || !localChannelId) {
+      console.log('Trying to get parameters from current URL...')
+      const urlParams = new URLSearchParams(window.location.search)
+      localAppName = urlParams.get('application_name') || ''
+      localChannelId = urlParams.get('channel_id') || ''
+      localRedirectUrl = urlParams.get('redirect_url') || ''
+      console.log('URL parameters found:', { appName: localAppName, channelId: localChannelId, redirectUrl: localRedirectUrl })
+    }
+    
+    // Final fallback: use environment defaults
+    if (!localAppName || !localChannelId) {
+      console.log('Using environment variable defaults...')
+      localAppName = localAppName || import.meta.env.VITE_DEFAULT_APPLICATION_NAME || ''
+      localChannelId = localChannelId || import.meta.env.VITE_DEFAULT_CHANNEL_ID || ''
+      console.log('Environment defaults:', { appName: localAppName, channelId: localChannelId })
+    }
+    
+    // Update refs for ConsentScreen
+    appName.value = localAppName
+    channelId.value = localChannelId
+    
+    if (!appName.value || !channelId.value) {
+      console.error('All parameter retrieval methods failed:')
+      console.error('Route query:', route.query)
+      console.error('SessionStorage:', {
+        appName: sessionStorage.getItem('oauth_application_name'),
+        channelId: sessionStorage.getItem('oauth_channel_id'),
+        customState: sessionStorage.getItem('oauth_custom_state')
+      })
+      throw new Error('Missing application or channel information. Please restart the login process.')
     }
 
-    // Check if user needs to complete their profile
-    const needsProfileCompletion = await authService.checkNeedsProfileCompletion()
+    console.log('Processing Google OAuth for:', { appName: localAppName, channelId: localChannelId, redirectUrl: localRedirectUrl })
+
+    // Clean up sessionStorage since we have the parameters
+    sessionStorage.removeItem('oauth_application_name')
+    sessionStorage.removeItem('oauth_channel_id')
+    sessionStorage.removeItem('oauth_redirect_url')
+
+    console.log('Processing Google OAuth for:', { appName: localAppName, channelId: localChannelId, redirectUrl: localRedirectUrl })
     
-    if (needsProfileCompletion) {
-      console.log('User needs to complete their profile')
+    try {
+      const result = await authService.processGoogleOAuth(localAppName, localChannelId, localRedirectUrl)
       
-      // In Amplify v6, we need to fetch user attributes separately
-      try {
-        const attributes = await fetchUserAttributes()
+      if (result.status === 'consent_required') {
+        // User needs to authorize the application first
+        console.log('User consent required - showing consent screen')
+        showConsentScreen.value = true
+        userTokens.value = result.tokens
+        // Store redirect URL for later use
+        if (localRedirectUrl) {
+          localStorage.setItem('temp_redirect_url', localRedirectUrl)
+        }
+        return
+      }
+      
+      if (result.needsProfileCompletion) {
+        // User needs to complete their profile
+        console.log('Redirecting to profile completion')
         
-        // Redirect to profile completion page
-        router.replace({
+        // Store tokens and session info for profile completion
+        localStorage.setItem('temp_session_id', result.sessionId)
+        localStorage.setItem('temp_user_attributes', JSON.stringify(result.userAttributes))
+        
+        // Navigate to profile completion
+        await router.push({
           name: 'CompleteProfile',
           query: {
-            required_attributes: 'phone_number',
-            application_name: appName.value,
-            channel_id: channelId.value,
-            redirect_url: route.query.redirect_url as string,
-            email: attributes.email || '',
-            given_name: attributes.given_name || '',
-            family_name: attributes.family_name || ''
+            session_id: result.sessionId,
+            redirect_url: localRedirectUrl || ''
           }
         })
-        return
-      } catch (attrError: any) {
-        console.error('Error fetching user attributes:', attrError)
-        throw new Error('Failed to get user attributes')
+      } else {
+        // User is fully authenticated, redirect to client app
+        console.log('User fully authenticated, redirecting to client app')
+        
+        if (localRedirectUrl) {
+          const finalUrl = `${localRedirectUrl}?session_id=${result.sessionId}`
+          console.log('Redirecting to:', finalUrl)
+          window.location.href = finalUrl
+        } else {
+          // Fallback: redirect to dashboard or home
+          await router.push({ name: 'Dashboard' })
+        }
       }
+    } catch (error: any) {
+      console.error('Google OAuth process failed:', error)
+      error.value = error.message || 'Google OAuth authentication failed'
+    } finally {
+      loading.value = false
     }
-    
-    // Check if user is authorized for this application
-    const authCheck = await api.checkAppUser(tokens.idToken, appName.value)
-    
-    // If user is not authorized, create the app-user relationship
-    if (!authCheck || !authCheck.authorized) {
-      await api.authorizeApplication({
-        application_id: appName.value,
-        granted_scopes: ['profile', 'orders'],
-        action: 'approve'
-      }, tokens.idToken)
-    }
-    
-    // Get redirect URL from query params or use default
-    const redirectUrl = route.query.redirect_url as string || '/'
-    
-    // If redirecting to client app, include auth tokens
-    if (redirectUrl.includes('8080') || redirectUrl.includes('client')) {
-      // Build redirect URL with tokens for client app
-      const tokenParams = new URLSearchParams({
-        access_token: tokens.accessToken,
-        id_token: tokens.idToken,
-        refresh_token: tokens.refreshToken || '',
-        expires_in: '3600' // 1 hour
-      })
-      
-      const finalRedirectUrl = redirectUrl.includes('?') 
-        ? `${redirectUrl}&${tokenParams.toString()}`
-        : `${redirectUrl}?${tokenParams.toString()}`
-      
-      console.log('Redirecting to client app with tokens:', finalRedirectUrl)
-      window.location.href = finalRedirectUrl
-    } else {
-      // Standard redirect
-      window.location.href = redirectUrl
-    }
-  } catch (err: any) {
-    console.error('Error during authentication:', err)
-    error.value = err.message || 'Failed to process your login. Please try again.'
+  } catch (error: any) {
+    console.error('Google OAuth process failed:', error)
+    error.value = error.message || 'Google OAuth authentication failed'
+  } finally {
     loading.value = false
   }
+}
+
+// Consent Screen Handlers
+const handleConsentApproved = async () => {
+  console.log('User approved consent, continuing OAuth flow...')
+  showConsentScreen.value = false
+  loading.value = true
+  
+  try {
+    // Now that user has authorized, try to initialize session again
+    const sessionResponse = await api.initSession(userTokens.value, appName.value)
+    if (!sessionResponse) {
+      throw new Error('Failed to initialize session with SSO backend')
+    }
+
+    console.log('Session initialized:', sessionResponse.session_id)
+
+    // For Google OAuth users, always go to CompleteProfile page
+    // since they need to complete their phone number and other details
+    console.log('Redirecting to CompleteProfile page')
+    
+    // Store session info for CompleteProfile page
+    localStorage.setItem('temp_session_id', sessionResponse.session_id)
+    
+    // Get redirect URL for after profile completion
+    const redirectUrl = localStorage.getItem('temp_redirect_url') || ''
+    
+    // Navigate to profile completion
+    await router.push({
+      name: 'CompleteProfile',
+      query: {
+        session_id: sessionResponse.session_id,
+        redirect_url: redirectUrl
+      }
+    })
+    
+  } catch (error: any) {
+    console.error('Post-consent flow failed:', error)
+    toast.error(error.message || 'Failed to complete authorization')
+    error.value = error.message || 'Authorization failed'
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleConsentDenied = () => {
+  console.log('User denied consent')
+  showConsentScreen.value = false
+  toast.error('Authorization was denied')
+  goToLogin()
+}
+
+const handleConsentError = (message: string) => {
+  console.error('Consent error:', message)
+  showConsentScreen.value = false
+  toast.error(message || 'Authorization failed')
+  error.value = message || 'Authorization failed'
 }
 
 // Function to navigate back to login
@@ -153,7 +294,11 @@ onMounted(() => {
     } else if (event === 'signedOut') {
       console.log('User signed out')
     } else if (event === 'customOAuthState') {
-      console.log('Custom OAuth state:', payload.data)
+      console.log('Custom OAuth state received:', payload.data)
+      // Store custom state in sessionStorage for later retrieval
+      if (payload.data) {
+        sessionStorage.setItem('oauth_custom_state', payload.data)
+      }
     } else if (event === 'signInWithRedirect_failure') {
       console.error('User sign in failed:', payload.data)
       error.value = 'Sign in failed. Please try again.'

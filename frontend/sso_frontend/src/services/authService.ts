@@ -20,15 +20,52 @@ export class AuthService {
    */
   async signInWithGoogle(): Promise<void> {
     try {
-      // Check if user is already signed in
-      const currentUser = await this.getCurrentUser();
-      if (currentUser) {
-        console.log('User already signed in, redirecting to dashboard');
-        return;
+      // For SSO flow, always sign out first to ensure fresh authentication
+      // This forces Google account selection by clearing all sessions
+      try {
+        await signOut();
+        console.log('Cleared Amplify sessions');
+        
+        // Also clear browser storage to force fresh Google OAuth
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Clear specific Amplify OAuth storage
+        localStorage.removeItem('amplify-signin-with-hostedUI');
+        localStorage.removeItem('amplify-oauth-state');
+        
+        // Clear any Cognito session cookies
+        document.cookie.split(";").forEach(function(c) { 
+          document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+        });
+        
+        console.log('Cleared all browser storage and cookies for fresh OAuth');
+      } catch (e) {
+        console.log('No existing session to clear');
       }
       
-      await signInWithRedirect({ provider: 'Google' });
+      // Get OAuth parameters from sessionStorage to include in state
+      const appName = sessionStorage.getItem('oauth_application_name')
+      const channelId = sessionStorage.getItem('oauth_channel_id')
+      const redirectUrl = sessionStorage.getItem('oauth_redirect_url')
+      
+      // Create custom state with parameters
+      const customState = {
+        application_name: appName,
+        channel_id: channelId,
+        redirect_url: redirectUrl
+      }
+      
+      await signInWithRedirect({ 
+        provider: 'Google',
+        customState: JSON.stringify(customState)
+      });
     } catch (err: any) {
+      if (err.name === 'UserAlreadyAuthenticatedException') {
+        console.log('User already authenticated - handling SSO flow');
+        // This is expected in SSO flow - redirect to appropriate page
+        return;
+      }
       console.error('Error signing in with Google:', err);
       throw err;
     }
@@ -39,15 +76,23 @@ export class AuthService {
    */
   async getCurrentUser() {
     try {
+      // Check if we have valid tokens first
+      const session = await this.getCurrentSession();
+      if (!session) {
+        return null;
+      }
+      
       return await getCurrentUser();
     } catch (err: any) {
-      console.error('Error getting current user:', err);
+      // Not authenticated - this is expected behavior
+      console.log('No authenticated user found');
       return null;
     }
   }
 
   /**
    * Get current session including tokens
+   * Enhanced with OAuth timing handling for Google OAuth flow
    */
   async getCurrentSession(): Promise<AuthTokens | null> {
     try {
@@ -55,7 +100,7 @@ export class AuthService {
       
       // Check if tokens exist in the session
       if (!session.tokens) {
-        console.error('Session tokens are missing');
+        console.log('Session tokens not yet available');
         return null;
       }
       
@@ -63,16 +108,19 @@ export class AuthService {
       const idToken = session.tokens.idToken?.toString();
       const accessToken = session.tokens.accessToken?.toString();
       
-      // Explicitly handle refreshToken which might be undefined in some flows
-      let refreshToken: string | undefined;
-      if ('refreshToken' in session.tokens) {
-        refreshToken = session.tokens.refreshToken?.toString();
+      // For OAuth flows, refreshToken might not be immediately available
+      // Handle different token structures in Amplify v6
+      let refreshToken = '';
+      if ('refreshToken' in session.tokens && session.tokens.refreshToken) {
+        refreshToken = session.tokens.refreshToken.toString();
       }
       
-      if (!idToken || !accessToken || !refreshToken) {
-        console.error('One or more tokens are missing');
+      if (!idToken || !accessToken) {
+        console.log('Required tokens (idToken, accessToken) not yet available');
         return null;
       }
+      
+      console.log('Session tokens retrieved successfully');
       
       // Return tokens in the format expected by our AuthTokens interface
       return {
@@ -81,9 +129,33 @@ export class AuthService {
         refreshToken
       };
     } catch (err: any) {
-      console.error('Error getting current session:', err);
+      console.log('Session not ready yet');
       return null;
     }
+  }
+
+  /**
+   * Wait for OAuth tokens with exponential backoff
+   * Specifically for Google OAuth flow timing issues
+   */
+  async waitForOAuthTokens(maxAttempts: number = 10): Promise<AuthTokens | null> {
+    let attempts = 0;
+    
+    while (attempts < maxAttempts) {
+      const tokens = await this.getCurrentSession();
+      if (tokens) {
+        console.log('OAuth tokens retrieved after', attempts + 1, 'attempts');
+        return tokens;
+      }
+      
+      attempts++;
+      const waitTime = Math.min(500 * Math.pow(2, attempts), 5000); // Exponential backoff, max 5s
+      console.log(`Waiting for OAuth tokens... attempt ${attempts}/${maxAttempts}`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    console.error('Failed to retrieve OAuth tokens after maximum attempts');
+    return null;
   }
 
   /**
@@ -131,6 +203,109 @@ export class AuthService {
     } catch (error: any) {
       console.error('Error checking profile completion status:', error);
       return false;
+    }
+  }
+
+  /**
+   * Complete Google OAuth flow with SSO backend integration
+   * Uses existing APIs from useApi composable
+   */
+  async processGoogleOAuth(applicationName: string, channelId: string, redirectUrl?: string) {
+    // Import useApi dynamically to avoid circular dependencies
+    const { useApi } = await import('@/composables/useApi');
+    const api = useApi();
+
+    try {
+      // Step 1: Validate application and channel using existing API
+      console.log('Validating application and channel...');
+      const appValidation = await api.validateAppChannel(applicationName, channelId);
+      if (!appValidation?.valid) {
+        throw new Error('Invalid application or channel');
+      }
+
+      // Step 2: Wait for OAuth tokens with proper timing
+      console.log('Waiting for OAuth tokens...');
+      const tokens = await this.waitForOAuthTokens();
+      if (!tokens) {
+        throw new Error('Failed to retrieve OAuth tokens - please try signing in again');
+      }
+
+      // Step 3: Get raw session to extract proper JWT tokens for backend validation
+      const rawSession = await fetchAuthSession();
+      
+      // Format tokens for backend - backend expects raw JWT tokens
+      const backendTokens = {
+        id_token: rawSession.tokens?.idToken?.toString(),
+        access_token: rawSession.tokens?.accessToken?.toString(),
+        refresh_token: (rawSession.tokens && 'refreshToken' in rawSession.tokens && rawSession.tokens.refreshToken) ? rawSession.tokens.refreshToken.toString() : '',
+        token_type: 'Bearer',
+        expires_in: rawSession.tokens?.accessToken?.payload?.exp || 3600
+      };
+      
+      console.log('Raw session tokens:', {
+        hasIdToken: !!backendTokens.id_token,
+        hasAccessToken: !!backendTokens.access_token,
+        hasRefreshToken: !!backendTokens.refresh_token,
+        idTokenLength: backendTokens.id_token?.length,
+        accessTokenLength: backendTokens.access_token?.length
+      });
+      
+      // Validate we have the required tokens
+      if (!backendTokens.id_token || !backendTokens.access_token) {
+        throw new Error('Missing required tokens for backend validation');
+      }
+
+      // Step 4: Check if user is already authorized for this application
+      console.log('Checking user authorization...');
+      const userAuth = await api.checkAppUser(backendTokens.id_token, applicationName);
+      if (!userAuth) {
+        console.log('User not yet authorized for this application - consent needed');
+        // Return special status indicating consent is needed
+        return {
+          status: 'consent_required',
+          tokens: backendTokens,
+          applicationName,
+          redirectUrl
+        };
+      }
+      
+      // Step 5: Initialize session with SSO backend
+      console.log('Initializing session with SSO backend...');
+      const sessionResponse = await api.initSession(backendTokens, applicationName);
+      if (!sessionResponse) {
+        throw new Error('Failed to initialize session with SSO backend');
+      }
+
+      console.log('Session initialized:', sessionResponse.session_id);
+
+      // Step 5: Check if profile completion is needed
+      const needsProfileCompletion = await this.checkNeedsProfileCompletion();
+      
+      if (needsProfileCompletion) {
+        console.log('User needs to complete profile');
+        const attributes = await fetchUserAttributes();
+        
+        return {
+          success: true,
+          needsProfileCompletion: true,
+          sessionId: sessionResponse.session_id,
+          userAttributes: attributes,
+          redirectUrl
+        };
+      }
+
+      // Step 6: User is fully authenticated and authorized
+      console.log('User fully authenticated');
+      return {
+        success: true,
+        needsProfileCompletion: false,
+        sessionId: sessionResponse.session_id,
+        redirectUrl
+      };
+
+    } catch (error: any) {
+      console.error('Google OAuth process failed:', error);
+      throw error;
     }
   }
 }

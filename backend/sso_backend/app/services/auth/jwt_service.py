@@ -55,12 +55,14 @@ class JWTService:
             key = self._get_key_for_token(token_header)
             
             # step 3: verify the signature using rsa + sha256 magic
+            # skip at_hash validation since we don't need to validate access token hash
             decoded_token = jwt.decode(
                 id_token,
                 key,
                 algorithms=['RS256'],  # only allow rs256, no funny business
                 audience=self.app_client_id,  # make sure token is for our app
-                issuer=f"https://cognito-idp.{self.region}.amazonaws.com/{self.user_pool_id}"  # from our cognito
+                issuer=f"https://cognito-idp.{self.region}.amazonaws.com/{self.user_pool_id}",  # from our cognito
+                options={"verify_at_hash": False}  # skip at_hash validation for OAuth flows
             )
             
             print(f"token is valid! user: {decoded_token.get('sub')}")

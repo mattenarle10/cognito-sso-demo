@@ -117,6 +117,62 @@ class SessionRepository:
         }
         
         self.dynamodb_service.dynamodb.Table(self.table_name).delete_item(Key=key)
+        
+    def update_session_tokens(self, session_id, tokens, expires_at=None):
+        """
+        update tokens for an existing session
+        
+        args:
+            session_id (str): the session id
+            tokens (dict): new tokens from cognito
+            expires_at (str): optional new expiration timestamp
+        
+        returns:
+            bool: success status
+        """
+        from datetime import datetime
+        
+        # Prepare update expression and attributes
+        update_expression = "SET "
+        expression_attribute_values = {}
+        expression_parts = []
+        
+        # Add token fields to update
+        if tokens.get('id_token'):
+            expression_parts.append("id_token = :id_token")
+            expression_attribute_values[":id_token"] = tokens.get('id_token')
+            
+        if tokens.get('access_token'):
+            expression_parts.append("access_token = :access_token")
+            expression_attribute_values[":access_token"] = tokens.get('access_token')
+            
+        if tokens.get('refresh_token'):
+            expression_parts.append("refresh_token = :refresh_token")
+            expression_attribute_values[":refresh_token"] = tokens.get('refresh_token')
+        
+        # Add expires_at if provided
+        if expires_at:
+            expression_parts.append("expires_at = :expires_at")
+            expression_attribute_values[":expires_at"] = expires_at
+        
+        # Add updated_at timestamp
+        expression_parts.append("updated_at = :updated_at")
+        expression_attribute_values[":updated_at"] = datetime.now().isoformat()
+        
+        # Build the final update expression
+        update_expression += ", ".join(expression_parts)
+        
+        try:
+            # Update the session in DynamoDB
+            self.dynamodb_service.update_item(
+                key={"PK": session_id, "SK": "session"},
+                update_expression=update_expression,
+                expression_attribute_values=expression_attribute_values
+            )
+            return True
+        except Exception as e:
+            print(f"Error updating session tokens: {str(e)}")
+            return False
     
     def get_user_sessions(self, user_id, include_expired=False):
         """
