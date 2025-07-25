@@ -75,7 +75,6 @@ class UserProfileDomain:
             'phone_number': self._validate_phone_number,
             'gender': self._validate_gender,
             'custom:gender': self._validate_gender,  # Allow custom:gender attribute
-            'custom:needs_profile_completion': self._validate_boolean_string,
             'custom:accepts_marketing': self._validate_boolean_string
         }
         
@@ -174,15 +173,18 @@ class UserProfileDomain:
                 reserved_keywords = {'name', 'status', 'type', 'data', 'timestamp', 'count', 'key'}
                 
                 for field, value in updates.items():
-                    if field.lower() in reserved_keywords:
-                        # Use expression attribute names for reserved keywords
-                        attr_name = f"#{field}"
-                        expression_parts.append(f"{attr_name} = :{field}")
+                    # Sanitize field name for use in expression attribute values (remove colons)
+                    sanitized_field = field.replace(':', '_')
+                    
+                    if field.lower() in reserved_keywords or ':' in field:
+                        # Use expression attribute names for reserved keywords or fields with colons
+                        attr_name = f"#{sanitized_field}"
+                        expression_parts.append(f"{attr_name} = :{sanitized_field}")
                         expression_attribute_names[attr_name] = field
                     else:
-                        expression_parts.append(f"{field} = :{field}")
+                        expression_parts.append(f"{field} = :{sanitized_field}")
                     
-                    expression_attribute_values[f":{field}"] = value
+                    expression_attribute_values[f":{sanitized_field}"] = value
                 
                 # Add updated timestamp (also a reserved keyword)
                 expression_parts.append("#updated_at = :updated_at")

@@ -187,7 +187,7 @@ export class AuthService {
 
   /**
    * Check if user needs to complete their profile
-   * This is determined by checking for the custom:needs_profile_completion attribute
+   * This is determined by checking if phone_number is missing or has placeholder value
    */
   async checkNeedsProfileCompletion(): Promise<boolean> {
     try {
@@ -198,8 +198,8 @@ export class AuthService {
       // In Amplify v6, we need to fetch attributes separately
       const attributes = await fetchUserAttributes();
       
-      return attributes['custom:needs_profile_completion'] === 'true' || 
-             attributes['phone_number'] === '+00000000000';
+      // Check if phone_number is missing or has placeholder value
+      return !attributes['phone_number'] || attributes['phone_number'] === '+00000000000';
     } catch (error: any) {
       console.error('Error checking profile completion status:', error);
       return false;
@@ -255,8 +255,32 @@ export class AuthService {
         throw new Error('Missing required tokens for backend validation');
       }
 
-      // Step 4: Check if user is already authorized for this application
-      console.log('Checking user authorization...');
+      // Step 4: Check if profile completion is needed FIRST
+      console.log('Checking if profile completion is needed...');
+      const needsProfileCompletion = await this.checkNeedsProfileCompletion();
+      
+      if (needsProfileCompletion) {
+        console.log('User needs to complete profile - skipping authorization check for now');
+        const attributes = await fetchUserAttributes();
+        
+        // Initialize a temporary session for profile completion
+        console.log('Initializing temporary session for profile completion...');
+        const sessionResponse = await api.initSession(backendTokens, applicationName);
+        if (!sessionResponse) {
+          throw new Error('Failed to initialize session with SSO backend');
+        }
+        
+        return {
+          success: true,
+          needsProfileCompletion: true,
+          sessionId: sessionResponse.session_id,
+          userAttributes: attributes,
+          redirectUrl
+        };
+      }
+
+      // Step 5: Profile is complete, now check authorization
+      console.log('Profile complete, checking user authorization...');
       const userAuth = await api.checkAppUser(backendTokens.id_token, applicationName);
       if (!userAuth) {
         console.log('User not yet authorized for this application - consent needed');
@@ -269,7 +293,7 @@ export class AuthService {
         };
       }
       
-      // Step 5: Initialize session with SSO backend
+      // Step 6: Initialize session with SSO backend
       console.log('Initializing session with SSO backend...');
       const sessionResponse = await api.initSession(backendTokens, applicationName);
       if (!sessionResponse) {
@@ -278,23 +302,7 @@ export class AuthService {
 
       console.log('Session initialized:', sessionResponse.session_id);
 
-      // Step 5: Check if profile completion is needed
-      const needsProfileCompletion = await this.checkNeedsProfileCompletion();
-      
-      if (needsProfileCompletion) {
-        console.log('User needs to complete profile');
-        const attributes = await fetchUserAttributes();
-        
-        return {
-          success: true,
-          needsProfileCompletion: true,
-          sessionId: sessionResponse.session_id,
-          userAttributes: attributes,
-          redirectUrl
-        };
-      }
-
-      // Step 6: User is fully authenticated and authorized
+      // Step 7: User is fully authenticated and authorized
       console.log('User fully authenticated');
       return {
         success: true,

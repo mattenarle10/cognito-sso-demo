@@ -162,7 +162,8 @@ const handleSuccessfulAuth = async () => {
     try {
       const result = await authService.processGoogleOAuth(localAppName, localChannelId, localRedirectUrl)
       
-      if (result.status === 'consent_required') {
+      // Check if consent is required (only returned when profile is complete but user not authorized)
+      if ('status' in result && result.status === 'consent_required') {
         // User needs to authorize the application first
         console.log('User consent required - showing consent screen')
         showConsentScreen.value = true
@@ -174,6 +175,7 @@ const handleSuccessfulAuth = async () => {
         return
       }
       
+      // Check if profile completion is needed (this is checked first in the new flow)
       if (result.needsProfileCompletion) {
         // User needs to complete their profile
         console.log('Redirecting to profile completion')

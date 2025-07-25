@@ -58,10 +58,7 @@ def handler(event, context):
             event['response']['autoConfirmUser'] = True
             event['response']['autoVerifyEmail'] = True
             
-            # Set needs_profile_completion flag for all social logins
-            # This will ensure they're redirected to the profile completion page
-            event['request']['userAttributes']['custom:needs_profile_completion'] = 'true'
-            print('[PreSignUp] Added needs_profile_completion flag')
+            # Social logins will be redirected to profile completion based on missing phone_number
             
             # Log all user attributes for debugging
             print(f"User attributes before modification: {event['request']['userAttributes']}")

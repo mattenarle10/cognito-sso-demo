@@ -37,6 +37,7 @@ provider:
           Action:
             - cognito-idp:UpdateUserAttributes
             - cognito-idp:GetUser
+            - cognito-idp:AdminUpdateUserAttributes
           Resource: arn:aws:cognito-idp:${self:provider.region}:*:userpool/${self:provider.environment.COGNITO_USER_POOL_ID}
 
 functions:

@@ -235,7 +235,7 @@ const idToken = ref('')
 const sessionId = ref(route.query.session_id as string || '')
 const applicationName = ref(route.query.application_name as string || '')
 const channelId = ref(route.query.channel_id as string || '')
-const redirectUrl = ref(route.query.redirect_url as string || '/')
+const redirectUrl = ref(route.query.redirect_url as string || '')
 const error = ref('')
 
 // Form data
@@ -244,7 +244,7 @@ const formData = reactive({
   family_name: '',
   phone_number: '',
   email: '',
-  gender: 'male',
+  gender: '', // Empty by default to make it required
   accepts_marketing: false
 })
 
@@ -337,6 +337,11 @@ const handleSubmit = async () => {
     isSubmitting.value = true
     error.value = ''
     
+    // Validate required fields
+    if (!formData.gender || formData.gender.trim() === '') {
+      throw new Error('Please select your gender')
+    }
+    
     // Validate phone number
     if (!/^\+[1-9]\d{6,14}$/.test(formData.phone_number)) {
       throw new Error('Please enter a valid phone number')
@@ -346,8 +351,7 @@ const handleSubmit = async () => {
     const attributesToUpdate: Record<string, string> = {
       phone_number: formData.phone_number,
       'custom:gender': formData.gender, // Use custom:gender as the attribute name
-      'custom:accepts_marketing': formData.accepts_marketing ? 'true' : 'false',
-      'custom:needs_profile_completion': 'false' // Remove the profile completion flag
+      'custom:accepts_marketing': formData.accepts_marketing ? 'true' : 'false'
     }
     
     console.log('Updating user attributes:', attributesToUpdate)
@@ -379,21 +383,16 @@ const handleSubmit = async () => {
     }
     
     console.log('Profile updated successfully')
-    toast.success('Profile updated successfully!')
     
-    // Store the id_token for consent screen
+    // For Google OAuth users who just completed their profile, 
+    // they should be automatically authorized - skip the consent screen
+    console.log('Profile completion successful, redirecting to application...')
+    
+    // Store the id_token for redirect
     idToken.value = sessionData.tokens.id_token
     
-    // Check if user needs to authorize the application
-    const authCheck = await api.checkAppUser(sessionData.tokens.id_token, applicationName.value)
-    
-    if (!authCheck || !authCheck.authorized) {
-      // Show consent screen
-      showConsentScreen.value = true
-    } else {
-      // User is already authorized - redirect to application
-      await handleRedirect()
-    }
+    // Redirect directly to the application
+    await handleRedirect()
   } catch (err: any) {
     console.error('Error updating profile:', err)
     error.value = err.message || 'Failed to update profile. Please try again.'
@@ -435,24 +434,47 @@ const handleConsentError = (message: string) => {
 // Handle redirect to application
 const handleRedirect = async () => {
   try {
+    console.log('🚀 handleRedirect called')
+    console.log('📋 Current state:', {
+      sessionId: sessionId.value,
+      redirectUrl: redirectUrl.value,
+      applicationName: applicationName.value,
+      channelId: channelId.value
+    })
+    
     // Show success toast
     toast.success('Profile completed successfully!')
     
     // Use the existing session_id that was passed from AuthCallback
     if (sessionId.value) {
-      console.log('Redirecting to client app with session ID:', sessionId.value)
+      console.log('✅ Session ID found, preparing redirect...')
+      console.log('🎯 Redirecting to client app with session ID:', sessionId.value)
+      
+      // Use provided redirect URL or fall back to default from environment variables
+      const defaultRedirectUrl = import.meta.env.VITE_DEFAULT_REDIRECT_URL || 'http://localhost:8080'
+      // Use default if redirectUrl is empty or just '/'
+      const finalRedirectUrl = (redirectUrl.value && redirectUrl.value !== '/') ? redirectUrl.value : defaultRedirectUrl
+      
+      console.log('🔗 Redirect URLs:', {
+        provided: redirectUrl.value,
+        default: defaultRedirectUrl,
+        final: finalRedirectUrl
+      })
+      
+      const finalUrl = `${finalRedirectUrl}?session_id=${sessionId.value}`
+      console.log('🌐 Final redirect URL:', finalUrl)
+      
       // Short delay to allow toast to be seen
       setTimeout(() => {
-        // Use provided redirect URL or fall back to default from environment variables
-        const defaultRedirectUrl = import.meta.env.VITE_DEFAULT_REDIRECT_URL || 'http://localhost:8080'
-        const finalRedirectUrl = redirectUrl.value || defaultRedirectUrl
-        window.location.href = `${finalRedirectUrl}?session_id=${sessionId.value}`
+        console.log('⏰ Executing redirect now...')
+        window.location.href = finalUrl
       }, 1000)
     } else {
+      console.error('❌ No session ID available')
       throw new Error('No session ID available for redirect')
     }
   } catch (err: any) {
-    console.error('Error during redirect:', err)
+    console.error('💥 Error during redirect:', err)
     error.value = err.message || 'Failed to complete redirect'
   }
 }

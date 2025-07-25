@@ -46,15 +46,41 @@ class CognitoUserService:
             })
         
         try:
-            # First, try to get user info to check token validity and extract sub
+            # Initialize variables
+            user_sub = None
+            cognito_username = None
+            
+            # First, try to get user info to check token validity and extract user info
             try:
                 user_info = self.get_user_info(access_token)
                 user_sub = user_info.get('sub')
                 print(f"Token is valid. User sub: {user_sub}")
                 print(f"Token scopes may be insufficient for direct attribute updates")
+                
+                # Also try to extract cognito:username from JWT for potential admin API use
+                try:
+                    from jose import jwt
+                    decoded_token = jwt.get_unverified_claims(access_token)
+                    cognito_username = decoded_token.get('cognito:username')
+                    print(f"Extracted cognito:username: {cognito_username}")
+                except Exception:
+                    pass  # cognito_username remains None
+                    
             except Exception as info_err:
                 print(f"Error getting user info: {str(info_err)}")
-                user_sub = None
+                # Try to extract user info from JWT token directly
+                try:
+                    from jose import jwt
+                    
+                    # Decode JWT without verification to extract claims
+                    decoded_token = jwt.get_unverified_claims(access_token)
+                    user_sub = decoded_token.get('sub')
+                    cognito_username = decoded_token.get('cognito:username')
+                    print(f"Extracted from JWT - sub: {user_sub}, username: {cognito_username}")
+                except Exception as jwt_err:
+                    print(f"Failed to decode JWT: {str(jwt_err)}")
+                    user_sub = None
+                    cognito_username = None
             
             # Try direct update with access token
             try:
@@ -72,16 +98,18 @@ class CognitoUserService:
                 
                 print(f"Direct update failed: {error_code} - {error_message}")
                 
-                # If we have the user_sub from the token and it's an authorization error,
+                # If we have user info from the token and it's an authorization error,
                 # try admin update as a fallback
                 if user_sub and error_code in ['NotAuthorizedException', 'AccessDeniedException']:
-                    print(f"Attempting admin update as fallback for user {user_sub}")
+                    # For admin API, we need to use the cognito:username, not the sub
+                    username_for_admin = cognito_username if cognito_username else user_sub
+                    print(f"Attempting admin update as fallback for user {username_for_admin}")
                     
                     try:
                         # Use admin API as fallback (requires appropriate IAM permissions)
                         admin_response = self.cognito_client.admin_update_user_attributes(
                             UserPoolId=self.user_pool_id,
-                            Username=user_sub,
+                            Username=username_for_admin,
                             UserAttributes=user_attributes
                         )
                         
