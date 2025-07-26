@@ -54,7 +54,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Hub } from 'aws-amplify/utils'
-import authService from '../services/authService'
+import authService from '../services/oauthService'
 import { useApi } from '../composables/useApi'
 import ConsentScreen from '../components/ConsentScreen.vue'
 import { useToast } from 'vue-toastification'

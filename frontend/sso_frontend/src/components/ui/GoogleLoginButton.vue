@@ -11,7 +11,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { AuthService } from '@/services/authService'
+import { AuthService } from '@/services/oauthService'
 import { useToast } from 'vue-toastification'
 
 const route = useRoute()

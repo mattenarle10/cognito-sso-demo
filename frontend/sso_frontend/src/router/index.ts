@@ -46,6 +46,16 @@ const router = createRouter({
       path: '/complete-profile',
       name: 'CompleteProfile',
       component: () => import('@/pages/CompleteProfilePage.vue'),
+    },
+    {
+      path: '/mfa-verify',
+      name: 'mfa-verify',
+      component: () => import('@/pages/MfaVerifyPage.vue'),
+    },
+    {
+      path: '/phone-otp',
+      name: 'phone-otp',
+      component: () => import('@/pages/PhoneOtpPage.vue'),
     }
   ],
 })

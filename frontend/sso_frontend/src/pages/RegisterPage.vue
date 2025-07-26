@@ -370,7 +370,7 @@ const handleRegister = async () => {
       channelId: channelId.value
     })
     
-    // redirect to separate otp page
+    // redirect to email otp page
     router.push({
       name: 'email-otp',
       query: {

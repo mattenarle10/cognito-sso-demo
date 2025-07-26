@@ -14,6 +14,22 @@ export interface CognitoTokens {
   expires_in?: number
 }
 
+/**
+ * Result from authentication which could be either tokens or an MFA challenge
+ */
+export type AuthResult = CognitoTokens | MfaChallenge;
+
+/**
+ * MFA Challenge response for when MFA verification is required
+ */
+export interface MfaChallenge {
+  challengeName: string;
+  session: string;
+  challengeParameters?: {
+    [key: string]: string;
+  };
+}
+
 export interface LoginCredentials {
   email: string
   password: string

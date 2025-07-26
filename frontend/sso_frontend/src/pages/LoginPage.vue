@@ -110,7 +110,7 @@ import GoogleLoginButton from '../components/ui/GoogleLoginButton.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { MailIcon, LockIcon, ArrowRightIcon } from 'lucide-vue-next'
-import type { LoginCredentials } from '../types/auth'
+import type { LoginCredentials, MfaChallenge, CognitoTokens, AuthResult } from '../types/auth'
 import { cognitoService } from '../services/cognitoService'
 import { useApi } from '../composables/useApi'
 import AuthBackground from '../components/ui/AuthBackground.vue'
@@ -173,12 +173,37 @@ const handleLogin = async () => {
 
   try {
     // cognito authentication with application context
-    const tokens = await cognitoService.signIn({
+    const result = await cognitoService.signIn({
       email: formData.value.email,
       password: formData.value.password,
       applicationName: appName.value,
       channelId: channelId.value
     })
+
+    // Check if MFA verification is required
+    if ('challengeName' in result && (result.challengeName === 'SMS_MFA' || result.challengeName === 'SOFTWARE_TOKEN_MFA')) {
+      // Determine the destination for the code (phone or email)
+      const destination = result.challengeParameters?.['CODE_DELIVERY_DESTINATION'] || ''
+      
+      // Redirect to MFA verification page with required parameters
+      router.push({
+        name: 'mfa-verify',
+        query: {
+          username: formData.value.email,
+          email: formData.value.email, // Also pass email for consistency
+          session: result.session,
+          challenge_name: result.challengeName, // Pass the specific challenge type
+          application_name: appName.value,
+          channel_id: channelId.value,
+          redirect_url: route.query.redirect_url as string,
+          phone: result.challengeName === 'SMS_MFA' ? destination : undefined
+        }
+      })
+      return
+    }
+    
+    // If we get here, standard authentication without MFA
+    const tokens = result as any // The result contains tokens
 
     // check if user is authorized for this application
     const authCheck = await api.checkAppUser(tokens.id_token, appName.value)
