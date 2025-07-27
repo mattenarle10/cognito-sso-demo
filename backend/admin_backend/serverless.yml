@@ -1,0 +1,104 @@
+service: matt-cognito-hop-admin-backend
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: python3.12
+  region: ap-southeast-2
+  stage: ${opt:stage, 'dev'}
+  memorySize: 128
+  timeout: 10
+  environment: ${file(./.env.${self:provider.stage}.yml)}
+  httpApi:
+    cors: true
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:BatchWriteItem
+          Resource: 
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.MAIN_TABLE}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.MAIN_TABLE}/index/*
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: arn:aws:logs:${self:provider.region}:*:*
+        - Effect: Allow
+          Action:
+            - cognito-idp:AdminGetUser
+            - cognito-idp:AdminUpdateUserAttributes
+            - cognito-idp:AdminDisableUser
+            - cognito-idp:AdminEnableUser
+            - cognito-idp:AdminDeleteUser
+            - cognito-idp:ListUsers
+            - cognito-idp:AdminResetUserPassword
+            - cognito-idp:AdminInitiateAuth
+            - cognito-idp:AdminSetUserPassword
+          Resource: arn:aws:cognito-idp:${self:provider.region}:*:userpool/${self:provider.environment.COGNITO_USER_POOL_ID}
+
+functions:
+  # HTTP APIs with admin authorization
+  listUsers:
+    handler: app.handlers.http.list_users.handler
+    description: "List all users with optional filtering"
+    events:
+      - httpApi:
+          path: /admin/users
+          method: get
+
+  getUser:
+    handler: app.handlers.http.get_user.handler
+    description: "Get detailed information for a specific user"
+    events:
+      - httpApi:
+          path: /admin/users/{user_id}
+          method: get
+
+  updateUser:
+    handler: app.handlers.http.update_user.handler
+    description: "Update user information"
+    events:
+      - httpApi:
+          path: /admin/users/{user_id}
+          method: patch
+
+  deleteUser:
+    handler: app.handlers.http.delete_user.handler
+    description: "Delete a user"
+    events:
+      - httpApi:
+          path: /admin/users/{user_id}
+          method: delete
+
+  forcePasswordReset:
+    handler: app.handlers.http.force_password_reset.handler
+    description: "Force user to reset password on next login"
+    events:
+      - httpApi:
+          path: /admin/users/{user_id}/password-reset
+          method: post
+
+  deactivateUser:
+    handler: app.handlers.http.deactivate_user.handler
+    description: "Disable a user account"
+    events:
+      - httpApi:
+          path: /admin/users/{user_id}/deactivate
+          method: post
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: false

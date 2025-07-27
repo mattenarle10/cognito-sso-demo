@@ -30,6 +30,13 @@ A serverless application implementing Single Sign-On (SSO) with AWS Cognito, Dyn
   - Protected content (orders)
   - Profile management integration
 
+- **Admin Portal** 🚧 PLANNED
+  - Vue 3 + Vite application for administrators
+  - User management interface
+  - User deactivation and deletion
+  - Force password reset functionality
+  - User profile editing capabilities
+
 ## Authentication Flow
 
 1. User clicks "Login" on Client App → redirected to SSO Frontend
@@ -45,9 +52,11 @@ A serverless application implementing Single Sign-On (SSO) with AWS Cognito, Dyn
 /cognito-hop/
 ├── backend/
 │   ├── sso_backend/         # SSO backend services
+│   │   └── admin/           # Admin-specific APIs
 │   └── client_backend/      # Client application backend
 └── frontend/
     ├── sso_frontend/        # SSO interface (Vue.js)
+    ├── admin_portal/        # Admin portal (Vue 3 + Vite)
     └── client_app/          # Client application UI (Vue.js)
 ```
 
