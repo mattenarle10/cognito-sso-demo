@@ -56,6 +56,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { Hub } from 'aws-amplify/utils'
 import authService from '../services/oauthService'
 import { useApi } from '../composables/useApi'
+import { useAdminCheck } from '../composables/useAdminCheck.ts'
 import ConsentScreen from '../components/ConsentScreen.vue'
 import { useToast } from 'vue-toastification'
 import AuthBackground from '../components/ui/AuthBackground.vue'
@@ -66,6 +67,10 @@ const router = useRouter()
 const route = useRoute()
 const api = useApi()
 const toast = useToast()
+const { checkIsAdmin, redirectToAdminPortalIfAdmin } = useAdminCheck()
+
+// Admin portal URL - should match the deployed admin portal URL
+const ADMIN_PORTAL_URL = import.meta.env.VITE_ADMIN_PORTAL_URL || 'http://localhost:5174'
 
 const loading = ref(true)
 const error = ref('')
@@ -73,10 +78,32 @@ const appName = ref('')
 const channelId = ref('')
 const showConsentScreen = ref(false)
 const userTokens = ref<any>(null)
+const isAdminUser = ref(false)
 
 // Function to handle successful authentication
 const handleSuccessfulAuth = async () => {
   try {
+    // First, check if user is an admin and store the result
+    const tokens = await authService.getCurrentSession()
+    if (tokens?.idToken?.toString()) {
+      // Store tokens for later use
+      localStorage.setItem('id_token', tokens.idToken.toString())
+      // Check if user is an admin
+      isAdminUser.value = await checkIsAdmin(tokens.idToken.toString())
+      
+      // If admin, redirect to admin portal instead of continuing the flow
+      if (isAdminUser.value) {
+        console.log('Admin user detected, redirecting to admin portal')
+        toast.success('Welcome, Admin! Redirecting to admin portal...')
+        // Short delay to allow toast to be seen
+        setTimeout(() => {
+          window.location.href = ADMIN_PORTAL_URL
+        }, 1500)
+        return
+      }
+    }
+    
+    // Continue with regular user flow
     // Get application info from OAuth custom state or fallback methods
     let localAppName = ''
     let localChannelId = ''
