@@ -195,7 +195,8 @@ function closeUserModal() {
 function confirmDisableUser(user: User) {
   selectedUser.value = user;
   confirmationTitle.value = 'Disable User';
-  confirmationMessage.value = `Are you sure you want to disable ${user.email}?`;
+  const email = user.attributes?.email || user.username;
+  confirmationMessage.value = `Are you sure you want to disable ${email}?`;
   confirmationButtonText.value = 'Disable';
   confirmationAction.value = disableUser;
   confirmationModalOpen.value = true;
@@ -204,7 +205,8 @@ function confirmDisableUser(user: User) {
 function confirmEnableUser(user: User) {
   selectedUser.value = user;
   confirmationTitle.value = 'Enable User';
-  confirmationMessage.value = `Are you sure you want to enable ${user.email}?`;
+  const email = user.attributes?.email || user.username;
+  confirmationMessage.value = `Are you sure you want to enable ${email}?`;
   confirmationButtonText.value = 'Enable';
   confirmationAction.value = enableUser;
   confirmationModalOpen.value = true;
@@ -213,7 +215,8 @@ function confirmEnableUser(user: User) {
 function confirmResetPassword(user: User) {
   selectedUser.value = user;
   confirmationTitle.value = 'Reset Password';
-  confirmationMessage.value = `Are you sure you want to reset the password for ${user.email}?`;
+  const email = user.attributes?.email || user.username;
+  confirmationMessage.value = `Are you sure you want to reset the password for ${email}?`;
   confirmationButtonText.value = 'Reset Password';
   confirmationAction.value = resetPassword;
   confirmationModalOpen.value = true;
@@ -222,7 +225,8 @@ function confirmResetPassword(user: User) {
 function confirmDeleteUser(user: User) {
   selectedUser.value = user;
   confirmationTitle.value = 'Delete User';
-  confirmationMessage.value = `Are you sure you want to permanently delete ${user.email}? This action cannot be undone.`;
+  const email = user.attributes?.email || user.username;
+  confirmationMessage.value = `Are you sure you want to permanently delete ${email}? This action cannot be undone.`;
   confirmationButtonText.value = 'Delete';
   confirmationAction.value = deleteUser;
   confirmationModalOpen.value = true;
@@ -300,62 +304,73 @@ async function deleteUser() {
 
 <style scoped>
 .admin-container {
-  padding: 24px;
-  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 .admin-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.admin-header h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-header h1::before {
+  content: '\f013';
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
 }
 
 .user-controls {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 1rem;
 }
 
 .user-controls span {
-  font-weight: 500;
+  font-size: 0.9rem;
+  color: #666;
 }
 
 .search-controls {
   display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
-  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  background-color: #f8f8f8;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .search-input {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid var(--border-color);
+  flex-grow: 1;
+  padding: 0.6rem 1rem;
+  border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
 }
 
-.loading-indicator {
-  padding: 16px;
-  text-align: center;
-  color: var(--accent-color);
-}
-
-.error-message {
-  padding: 12px 16px;
-  background-color: #f8eaec;
-  color: var(--error-color);
-  border: 1px solid #f5c6cb;
-  border-radius: 4px;
-  margin-bottom: 16px;
-}
-
-.pagination {
+.search-input:focus {
+  border-color: #0077cc;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 119, 204, 0.1);
   display: flex;
   justify-content: center;
   gap: 8px;

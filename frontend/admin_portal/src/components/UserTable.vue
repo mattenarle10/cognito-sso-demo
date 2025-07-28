@@ -3,11 +3,11 @@
     <table class="user-table">
       <thead>
         <tr>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Status</th>
-          <th>Created Date</th>
-          <th>Actions</th>
+          <th><i class="fas fa-user"></i> Name</th>
+          <th><i class="fas fa-envelope"></i> Email</th>
+          <th><i class="fas fa-circle-info"></i> Status</th>
+          <th><i class="fas fa-calendar"></i> Created</th>
+          <th><i class="fas fa-tools"></i> Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -24,11 +24,21 @@
           </td>
           <td>{{ user.user_create_date ? new Date(user.user_create_date).toLocaleDateString() : 'N/A' }}</td>
           <td class="actions">
-            <button class="btn-action view" @click="$emit('view-user', user)">View</button>
-            <button v-if="user.enabled" class="btn-action disable" @click="$emit('disable-user', user)">Disable</button>
-            <button v-else class="btn-action enable" @click="$emit('enable-user', user)">Enable</button>
-            <button class="btn-action reset" @click="$emit('reset-password', user)">Reset Password</button>
-            <button class="btn-action delete" @click="$emit('delete-user', user)">Delete</button>
+            <button class="btn-action view" @click="$emit('view-user', user)" title="View User Details">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button v-if="user.enabled" class="btn-action disable" @click="$emit('disable-user', user)" title="Disable User">
+              <i class="fas fa-ban"></i>
+            </button>
+            <button v-else class="btn-action enable" @click="$emit('enable-user', user)" title="Enable User">
+              <i class="fas fa-check-circle"></i>
+            </button>
+            <button class="btn-action reset" @click="$emit('reset-password', user)" title="Reset Password">
+              <i class="fas fa-key"></i>
+            </button>
+            <button class="btn-action delete" @click="$emit('delete-user', user)" title="Delete User">
+              <i class="fas fa-trash-alt"></i>
+            </button>
           </td>
         </tr>
       </tbody>
@@ -127,16 +137,21 @@ defineEmits<{
 .actions {
   display: flex;
   gap: 0.5rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
 }
 
 .btn-action {
-  padding: 0.25rem 0.5rem;
+  width: 36px;
+  height: 36px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.8rem;
-  transition: background-color 0.2s;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-action.view {
