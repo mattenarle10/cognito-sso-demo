@@ -23,7 +23,7 @@ export const api = {
   // User management
   async getUsers(params = {}) {
     try {
-      const response = await apiClient.get('/users', { params })
+      const response = await apiClient.get('/admin/users', { params })
       return response.data
     } catch (error) {
       console.error('Error fetching users:', error)
@@ -33,7 +33,7 @@ export const api = {
 
   async getUserDetails(userId: string) {
     try {
-      const response = await apiClient.get(`/users/${userId}`)
+      const response = await apiClient.get(`/admin/users/${userId}`)
       return response.data
     } catch (error) {
       console.error(`Error fetching user ${userId}:`, error)
@@ -43,7 +43,7 @@ export const api = {
 
   async disableUser(userId: string) {
     try {
-      const response = await apiClient.post(`/users/${userId}/deactivate`)
+      const response = await apiClient.post(`/admin/users/${userId}/deactivate`)
       return response.data
     } catch (error) {
       console.error(`Error disabling user ${userId}:`, error)
@@ -53,7 +53,7 @@ export const api = {
 
   async enableUser(userId: string) {
     try {
-      const response = await apiClient.post(`/users/${userId}/activate`)
+      const response = await apiClient.post(`/admin/users/${userId}/activate`)
       return response.data
     } catch (error) {
       console.error(`Error enabling user ${userId}:`, error)
@@ -63,7 +63,7 @@ export const api = {
 
   async resetPassword(userId: string) {
     try {
-      const response = await apiClient.post(`/users/${userId}/reset-password`)
+      const response = await apiClient.post(`/admin/users/${userId}/password-reset`)
       return response.data
     } catch (error) {
       console.error(`Error resetting password for user ${userId}:`, error)
@@ -73,7 +73,7 @@ export const api = {
 
   async deleteUser(userId: string) {
     try {
-      const response = await apiClient.delete(`/users/${userId}`)
+      const response = await apiClient.delete(`/admin/users/${userId}`)
       return response.data
     } catch (error) {
       console.error(`Error deleting user ${userId}:`, error)

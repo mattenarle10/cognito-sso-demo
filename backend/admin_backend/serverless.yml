@@ -11,7 +11,25 @@ provider:
   timeout: 10
   environment: ${file(./.env.${self:provider.stage}.yml)}
   httpApi:
-    cors: true
+    cors:
+      allowedOrigins:
+        - http://localhost:5173
+        - http://localhost:5174
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+        - X-Amz-Date
+        - X-Api-Key
+        - X-Amz-Security-Token
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      allowCredentials: true
+      maxAge: 86400
   iam:
     role:
       statements:
