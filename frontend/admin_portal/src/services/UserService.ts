@@ -2,12 +2,21 @@ import { api } from './api';
 
 export interface User {
   username: string;
-  name?: string;
-  email: string;
-  phone_number?: string;
-  status: string;
+  user_status: string;
   enabled: boolean;
-  created_date: string;
+  user_create_date: string;
+  user_last_modified_date: string;
+  attributes?: {
+    name?: string;
+    email?: string;
+    phone_number?: string;
+    'email_verified'?: string;
+    'phone_number_verified'?: string;
+    gender?: string;
+    'custom:accepts_marketing'?: string;
+    sub?: string;
+    [key: string]: any;
+  };
   [key: string]: any;
 }
 
