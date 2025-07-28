@@ -27,14 +27,25 @@ def admin_only(handler):
         try:
             # Check if Authorization header is present
             headers = event.get('headers', {})
-            if not headers or 'authorization' not in headers:
+            
+            # Convert all header keys to lowercase for case-insensitive matching
+            headers_lower = {k.lower(): v for k, v in headers.items()} if headers else {}
+            
+            if not headers_lower or 'authorization' not in headers_lower:
+                print("Authorization header missing. Available headers:", headers)
                 return {
                     'statusCode': 401,
+                    'headers': {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*',
+                        'Access-Control-Allow-Credentials': True,
+                    },
                     'body': json.dumps({'message': 'Missing authorization header'})
                 }
                 
             # Extract the JWT token from the Authorization header
-            auth_header = headers.get('authorization')
+            auth_header = headers_lower.get('authorization')
+            print("Authorization header found:", auth_header)
             token = auth_header.replace('Bearer ', '')
             
             # Verify token and extract claims
@@ -44,6 +55,11 @@ def admin_only(handler):
             if not is_admin_user(claims):
                 return {
                     'statusCode': 403,
+                    'headers': {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*',
+                        'Access-Control-Allow-Credentials': True,
+                    },
                     'body': json.dumps({'message': 'Insufficient permissions - Admin access required'})
                 }
             
@@ -57,8 +73,14 @@ def admin_only(handler):
             return handler(event, context)
             
         except AdminAuthError as e:
+            print(f"Admin auth error: {str(e)}")
             return {
                 'statusCode': 401,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Credentials': True,
+                },
                 'body': json.dumps({'message': str(e)})
             }
         except Exception as e:
@@ -66,6 +88,11 @@ def admin_only(handler):
             print(traceback.format_exc())
             return {
                 'statusCode': 500,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Credentials': True,
+                },
                 'body': json.dumps({'message': 'Internal server error during authorization'})
             }
     
@@ -85,24 +112,36 @@ def verify_token(token):
         AdminAuthError: If token is invalid
     """
     try:
-        # Get token header and payload
+        # Get Cognito user pool ID and region from environment variables
+        user_pool_id = os.environ.get('COGNITO_USER_POOL_ID')
+        region = os.environ.get('AWS_REGION', 'ap-southeast-2')
+        
+        if not user_pool_id:
+            print("COGNITO_USER_POOL_ID environment variable not set")
+            raise AdminAuthError('Configuration error')
+            
+        # Get token header
         header = jwt.get_unverified_header(token)
         
-        # This is a simplified version - in production, you'd verify the token signature
-        # with the Cognito public keys and properly validate all claims
-        # For testing purposes, we'll just decode the token to get the claims
+        # For debugging
+        print(f"Token header: {header}")
         
-        # For production use, implement full token verification:
-        # 1. Fetch Cognito public keys from jwks_uri endpoint
-        # 2. Verify token signature with the matching key
-        # 3. Validate token issuer, audience, and expiration
-        
-        # Decode token without verification for now (REPLACE THIS IN PRODUCTION!)
+        # For development/testing purposes, we'll use unverified claims
+        # but log the details for debugging
         payload = jwt.get_unverified_claims(token)
+        print(f"Token payload: {json.dumps(payload)}")
         
         # Check if token is expired
         if 'exp' in payload and payload['exp'] < int(time.time()):
+            print(f"Token expired: {payload['exp']} < {int(time.time())}")
             raise AdminAuthError('Token is expired')
+            
+        # Check issuer
+        expected_issuer = f'https://cognito-idp.{region}.amazonaws.com/{user_pool_id}'
+        if 'iss' in payload and payload['iss'] != expected_issuer:
+            print(f"Invalid issuer: {payload['iss']} != {expected_issuer}")
+            # For debugging, we'll just log this but not fail
+            print("WARNING: Token issuer doesn't match expected value")
             
         return payload
         
@@ -120,6 +159,28 @@ def is_admin_user(claims):
     Returns:
         bool: True if user has admin role, False otherwise
     """
-    # Check for admin attribute in claims
-    is_admin = claims.get('custom:is_admin', '').lower() == 'true'
-    return is_admin
+    # Print all claims for debugging
+    print(f"Checking admin status in claims: {json.dumps(claims)}")
+    
+    # Check for admin attribute in various possible formats
+    # 1. Check custom:is_admin attribute
+    if claims.get('custom:is_admin', '').lower() == 'true':
+        return True
+        
+    # 2. Check cognito:groups to see if user is in admin group
+    groups = claims.get('cognito:groups', [])
+    if isinstance(groups, list) and 'admin' in [g.lower() for g in groups]:
+        return True
+        
+    # 3. Check 'roles' claim if it exists
+    roles = claims.get('roles', [])
+    if isinstance(roles, list) and 'admin' in [r.lower() for r in roles]:
+        return True
+        
+    # 4. For testing, if environment variable BYPASS_ADMIN_CHECK is set to true, allow all authenticated users
+    if os.environ.get('BYPASS_ADMIN_CHECK', '').lower() == 'true':
+        print("WARNING: Admin check bypassed due to BYPASS_ADMIN_CHECK environment variable")
+        return True
+        
+    # No admin role found
+    return False

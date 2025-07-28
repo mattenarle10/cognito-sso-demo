@@ -13,9 +13,15 @@ const apiClient = axios.create({
 // Add token to requests
 apiClient.interceptors.request.use(config => {
   const token = localStorage.getItem('id_token')
+  console.log('API Request - Token from localStorage:', token ? 'Token exists' : 'No token found')
+  
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+    console.log('API Request - Authorization header set')
+  } else {
+    console.warn('API Request - No token available for request to:', config.url)
   }
+  
   return config
 })
 
