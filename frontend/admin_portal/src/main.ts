@@ -1,7 +1,6 @@
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
-import Dashboard from './pages/Dashboard.vue'
 import Toast from 'vue-toastification'
 
 // Import styles
@@ -14,8 +13,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'dashboard',
-      component: Dashboard
+
     }
   ]
 })
