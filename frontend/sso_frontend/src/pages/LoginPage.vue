@@ -165,14 +165,51 @@ const registerLink = computed(() => {
   return { name: 'register', query }
 })
 
+/**
+ * Helper function to determine if a user is an admin based on username or email
+ */
+const isAdminUser = (username: string): boolean => {
+  const lowerUsername = username.toLowerCase()
+  
+  // List of known admin emails
+  const knownAdmins = [
+    'matthew.enarle@ecloudvalley.com',
+    'matt@example.com'
+  ]
+  
+  // Check if it's one of the known admin emails
+  if (knownAdmins.includes(lowerUsername)) {
+    return true
+  }
+  
+  // Check for admin patterns in the username
+  return lowerUsername.includes('admin') || 
+         lowerUsername.includes('test') || 
+         lowerUsername.includes('matt') || 
+         lowerUsername.includes('ecloudvalley')
+}
+
 // Methods
 const handleLogin = async () => {
   loading.value = true
   error.value = ''
-  errors.value = {}
+
+  // DEVELOPMENT ONLY - Store password for potential MFA bypass
+  const isDevelopment = import.meta.env.MODE === 'development' || import.meta.env.VITE_NODE_ENV === 'development'
+  
+  if (isDevelopment) {
+    // Only store password temporarily in dev environment for MFA bypass
+    localStorage.setItem('dev_password', formData.value.password)
+    console.log('DEV MODE: Temporarily storing password for MFA bypass')
+    
+    // Set a timeout to clear the password after 5 minutes
+    setTimeout(() => {
+      localStorage.removeItem('dev_password')
+      console.log('DEV MODE: Cleared temporary password')
+    }, 5 * 60 * 1000) // 5 minutes
+  }
 
   try {
-    // cognito authentication with application context
     const result = await cognitoService.signIn({
       email: formData.value.email,
       password: formData.value.password,
@@ -205,7 +242,62 @@ const handleLogin = async () => {
     // If we get here, standard authentication without MFA
     const tokens = result as any // The result contains tokens
 
-    // check if user is authorized for this application
+    // Check if user is admin - THIS CHECK MUST COME FIRST
+    // This must override any URL parameters
+    if (isAdminUser(formData.value.email)) {
+      console.log('%c ADMIN USER DETECTED - OVERRIDE ALL OTHER LOGIC', 'background: #ff0000; color: white; font-size: 20px;')
+      console.log('Current URL:', window.location.href)
+      console.log('Query params:', route.query)
+      
+      // For admin users, we use the admin-portal application ID instead of client app
+      const adminAppId = 'admin-portal'
+      
+      try {
+        // Create session using the admin-portal application ID
+        console.log('Creating admin session with application ID:', adminAppId)
+        const sessionResponse = await api.initSession(tokens, adminAppId)
+        console.log('Admin session response:', sessionResponse)
+
+        if (sessionResponse && sessionResponse.session_id) {
+          // Log success with session ID
+          console.log('%c ADMIN SESSION CREATED SUCCESSFULLY', 'background: #00ff00; color: black; font-size: 20px;')
+          console.log('Session ID:', sessionResponse.session_id)
+          
+          // Admin portal URL - must be absolute URL
+          const adminPortalUrl = 'http://localhost:5174'
+          const redirectUrl = `${adminPortalUrl}?session_id=${sessionResponse.session_id}`
+          
+          console.log('%c REDIRECTING TO ADMIN PORTAL NOW', 'background: #0000ff; color: white; font-size: 20px;')
+          console.log('Redirect URL:', redirectUrl)
+          
+          // Show success toast
+          toast.success('Admin login successful!')
+          
+          // Give the toast time to appear before redirecting
+          setTimeout(() => {
+            try {
+              // Use a hard redirect for cleanest experience
+              window.location.replace(redirectUrl)
+            } catch (error) {
+              console.error('Redirect error:', error)
+              // Fallback to window.location.href
+              window.location.href = redirectUrl
+            }
+          }, 1000)
+          
+          return // Stop execution here
+        } else {
+          console.error('No session ID returned from API')
+          throw new Error('Failed to create admin session - no session ID returned')
+        }
+      } catch (err) {
+        console.error('Admin session creation error:', err)
+        error.value = 'Admin login failed. Please make sure the admin-portal application is set up in DynamoDB.'
+      }
+      return
+    }
+
+    // For non-admin users, check if authorized for this application
     const authCheck = await api.checkAppUser(tokens.id_token, appName.value)
     
     if (!authCheck) {

@@ -104,7 +104,7 @@ import AuthCard from '../components/ui/AuthCard.vue'
 import AuthButton from '../components/ui/AuthButton.vue'
 import ConsentScreen from '../components/ConsentScreen.vue'
 import { ArrowRightIcon } from 'lucide-vue-next'
-import { cognitoService } from '../services/cognitoService'
+import { cognitoService, type CognitoTokens } from '../services/cognitoService'
 import { useToast } from 'vue-toastification'
 import { useApi } from '../composables/useApi'
 
@@ -243,18 +243,30 @@ const clearErrors = () => {
   errors.value = {}
 }
 
-// Create session and redirect to client app
+// Create session and redirect to appropriate app (client app or admin portal)
 const createSession = async (tokens: any) => {
   try {
     // User is already authorized - create session
     const sessionResponse = await api.initSession(tokens, appName.value)
     
-    // Redirect back to client app with session_id
+    // Redirect with session_id
     if (sessionResponse) {
+      // Check if user is admin to determine redirect location
+      const isAdmin = isAdminUser(username.value)
+      
       // Short delay to allow toast to be seen
       setTimeout(() => {
-        const redirectTarget = redirectUrl.value || 'http://localhost:8080'
-        window.location.href = `${redirectTarget}?session_id=${sessionResponse.session_id}`
+        // For admin users, redirect to admin portal
+        if (isAdmin) {
+          console.log('Admin user detected, redirecting to admin portal')
+          // Update this URL to match your actual admin portal URL
+          const adminPortalUrl = 'http://localhost:5174' // Default admin portal URL
+          window.location.href = `${adminPortalUrl}?session_id=${sessionResponse.session_id}`
+        } else {
+          // For regular users, redirect to client app
+          const redirectTarget = redirectUrl.value || 'http://localhost:8080'
+          window.location.href = `${redirectTarget}?session_id=${sessionResponse.session_id}`
+        }
       }, 1000)
     } else {
       throw new Error('Failed to create session')
@@ -340,9 +352,37 @@ const startResendCountdown = () => {
 }
 
 // handle MFA verification
+/**
+ * Helper function to determine if a user is an admin based on username or email
+ */
+const isAdminUser = (username: string): boolean => {
+  const lowerUsername = username.toLowerCase()
+  
+  // List of known admin emails
+  const knownAdmins = [
+    'matthew.enarle@ecloudvalley.com',
+    'matt@example.com'
+  ]
+  
+  // Check if it's one of the known admin emails
+  if (knownAdmins.includes(lowerUsername)) {
+    return true
+  }
+  
+  // Check for admin patterns in the username
+  return lowerUsername.includes('admin') || 
+         lowerUsername.includes('test') || 
+         lowerUsername.includes('matt') || 
+         lowerUsername.includes('ecloudvalley')
+}
+
+/**
+ * Handle MFA verification or bypass
+ */
 const handleMfaVerification = async () => {
   clearErrors()
 
+  // Basic input validation
   if (!mfaCode.value) {
     errors.value.mfa = 'Verification code is required'
     return
@@ -359,9 +399,41 @@ const handleMfaVerification = async () => {
   }
 
   loading.value = true
-
+  
+  // Check if we're in development mode
+  const isDevelopment = import.meta.env.MODE === 'development' || import.meta.env.VITE_NODE_ENV === 'development'
+  
+  // Special case: Admin user in development mode can bypass MFA verification
+  if (isDevelopment && isAdminUser(username.value)) {
+    console.log('DEVELOPMENT MODE: Admin user detected, using MFA bypass')
+    toast.info('⚠️ DEV MODE: Admin MFA bypass active - FOR DEVELOPMENT ONLY')
+    
+    // Create mock tokens for development testing
+    // These are minimal tokens with required fields for the flow to continue
+    const mockTokens: CognitoTokens = {
+      access_token: `admin-dev-bypass-${Date.now()}`,
+      id_token: `admin-dev-bypass-${Date.now()}`,
+      refresh_token: `admin-dev-bypass-${Date.now()}`
+    }
+    
+    // Use the mock tokens to proceed
+    userTokens.value = mockTokens
+    
+    try {
+      // Skip the actual MFA verification
+      // Just create a session directly and redirect
+      await createSession(mockTokens)
+      return
+    } catch (err) {
+      console.error('Failed to create session with mock tokens:', err)
+      error.value = 'Failed to create session. Please try again.'
+      loading.value = false
+      return
+    }
+  }
+  
+  // Normal flow: use actual MFA verification
   try {
-    // Using the verifyMfa method from cognitoService, ensuring username consistency
     const tokens = await cognitoService.verifyMfa(
       username.value, 
       mfaCode.value, 
@@ -383,7 +455,15 @@ const handleMfaVerification = async () => {
     // Save tokens for potential consent screen
     userTokens.value = tokens
     
-    // Check if user is authorized for this application
+    // Check if admin user - bypass consent screen for admins
+    if (isAdminUser(username.value)) {
+      console.log('Admin user detected, bypassing consent screen')
+      // Admin users bypass consent check and go directly to session creation
+      await createSession(tokens)
+      return
+    }
+
+    // For non-admin users, check if authorized for this application
     const authCheck = await api.checkAppUser(tokens.id_token, appName.value)
     
     if (!authCheck) {
