@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { apiClient } from '../utils/api'
 import { API_CONFIG } from '../utils/constants'
 import type { AppValidationResponse, UserAuthResponse, SessionResponse, TokenResponse, UserSession } from '../types/api'
+import type { CognitoTokens } from '../services/cognitoService'
 
 export function useApi() {
   const loading = ref(false)
@@ -31,13 +32,35 @@ export function useApi() {
     error.value = null
     
     try {
+      // Use token from parameter or fallback to localStorage
+      // This ensures we always use the most recent token
+      const token = idToken || localStorage.getItem('id_token')
+      
+      if (!token) {
+        throw new Error('No authentication token available')
+      }
+      
+      // Check if user has authorized the application
       const response = await apiClient.get(API_CONFIG.endpoints.checkAppUser, {
         params: { application_id: applicationId },
-        headers: { Authorization: `Bearer ${idToken}` }
+        headers: { Authorization: `Bearer ${token}` }
       })
       return response.data.data
     } catch (err: any) {
-      error.value = err.response?.data?.message || 'authorization check failed'
+      // For first-time users, a 404 is expected (not authorized yet)
+      // This will trigger the consent screen
+      if (err.response?.status === 404) {
+        return null
+      }
+      
+      // For token expiration, provide a clear error message
+      if (err.response?.status === 401 && 
+          err.response?.data?.error_code === 'INVALID_TOKEN') {
+        error.value = 'Your session has expired. Please log in again.'
+        return null
+      }
+      
+      error.value = err.response?.data?.message || 'Failed to check app user'
       return null
     } finally {
       loading.value = false
@@ -72,6 +95,21 @@ export function useApi() {
       const response = await apiClient.get(API_CONFIG.endpoints.getSession, {
         params: { session_id: sessionId }
       })
+      
+      // If successful, store tokens in localStorage
+      const data = response.data.data;
+      if (data && data.tokens) {
+        if (data.tokens.id_token) {
+          localStorage.setItem('id_token', data.tokens.id_token);
+        }
+        if (data.tokens.access_token) {
+          localStorage.setItem('access_token', data.tokens.access_token);
+        }
+        if (data.tokens.refresh_token) {
+          localStorage.setItem('refresh_token', data.tokens.refresh_token);
+        }
+      }
+      
       return response.data.data
     } catch (err: any) {
       error.value = err.response?.data?.message || 'failed to get session'
@@ -79,6 +117,20 @@ export function useApi() {
     } finally {
       loading.value = false
     }
+  }
+  
+  // refresh tokens using session_id
+  const refreshTokens = async (): Promise<TokenResponse | null> => {
+    // Get session_id from URL query parameter or localStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id') || localStorage.getItem('session_id');
+    
+    if (!sessionId) {
+      console.log('No session ID available for token refresh');
+      return null;
+    }
+    
+    return await getSession(sessionId);
   }
 
   // authorize application with granted scopes
@@ -94,17 +146,33 @@ export function useApi() {
     error.value = null
     
     try {
+      // Use token from parameter or fallback to localStorage
+      // This ensures we always use the most recent token
       const token = idToken || localStorage.getItem('id_token')
+      
       if (!token) {
-        throw new Error('no authentication token found')
+        throw new Error('No ID token available')
       }
-
-      const response = await apiClient.post('/authorize-application', data, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      
+      console.log('Authorizing application with token')
+      const response = await apiClient.post(
+        API_CONFIG.endpoints.authorizeApplication,
+        data,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      )
+      
       return response.data.data
     } catch (err: any) {
-      error.value = err.response?.data?.message || 'authorization failed'
+      // For token expiration, provide a clear error message
+      if (err.response?.status === 401 && 
+          err.response?.data?.error_code === 'INVALID_TOKEN') {
+        console.error('Token expired during application authorization')
+        error.value = 'Your session has expired. Please log in again.'
+      } else {
+        error.value = err.response?.data?.message || 'Failed to authorize application'
+      }
       return null
     } finally {
       loading.value = false
@@ -232,6 +300,8 @@ export function useApi() {
     }
   }
 
+  // Note: Token refresh is now handled by the session mechanism via getSession
+
   // Note: We're using getUserAuthorizations to get application details instead of a separate endpoint
 
   return {
@@ -241,6 +311,7 @@ export function useApi() {
     checkAppUser,
     initSession,
     getSession,
+    refreshTokens,
     authorizeApplication,
     getUserAuthorizations,
     revokeAuthorization,
@@ -248,4 +319,4 @@ export function useApi() {
     getUserSessions,
     revokeUserSession
   }
-} 
+}

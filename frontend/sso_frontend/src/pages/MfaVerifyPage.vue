@@ -250,7 +250,7 @@ const createSession = async (tokens: any) => {
     const sessionResponse = await api.initSession(tokens, appName.value)
     
     // Redirect with session_id
-    if (sessionResponse) {
+    if (sessionResponse && sessionResponse.session_id) {
       // Check if user is admin to determine redirect location
       const isAdmin = isAdminUser(username.value)
       
@@ -279,7 +279,17 @@ const createSession = async (tokens: any) => {
 // Consent screen handlers
 const handleConsentApproved = async () => {
   if (!userTokens.value) return
-  await createSession(userTokens.value)
+  
+  try {
+    // We don't need to refresh tokens before creating session
+    // The backend will automatically refresh tokens when creating a new session
+    // if they're expired or about to expire
+    console.log('Using existing tokens for session creation')
+    
+    await createSession(userTokens.value)
+  } catch (err: any) {
+    error.value = err.message || 'Failed to create session after consent'
+  }
 }
 
 const handleConsentDenied = () => {
@@ -358,22 +368,15 @@ const startResendCountdown = () => {
 const isAdminUser = (username: string): boolean => {
   const lowerUsername = username.toLowerCase()
   
-  // List of known admin emails
+  // List of known admin emails - ONLY these emails should be admins
   const knownAdmins = [
     'matthew.enarle@ecloudvalley.com',
     'matt@example.com'
   ]
   
-  // Check if it's one of the known admin emails
-  if (knownAdmins.includes(lowerUsername)) {
-    return true
-  }
-  
-  // Check for admin patterns in the username
-  return lowerUsername.includes('admin') || 
-         lowerUsername.includes('test') || 
-         lowerUsername.includes('matt') || 
-         lowerUsername.includes('ecloudvalley')
+  // ONLY check against the explicit list of admin emails
+  // No pattern matching to avoid false positives
+  return knownAdmins.includes(lowerUsername)
 }
 
 /**
@@ -468,6 +471,8 @@ const handleMfaVerification = async () => {
     
     if (!authCheck) {
       // User needs to authorize this application - show consent screen
+      // Store tokens for consent screen
+      userTokens.value = tokens
       showConsentScreen.value = true
       return
     }

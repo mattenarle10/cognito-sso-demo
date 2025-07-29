@@ -171,22 +171,14 @@ const registerLink = computed(() => {
 const isAdminUser = (username: string): boolean => {
   const lowerUsername = username.toLowerCase()
   
-  // List of known admin emails
+  // List of known admin emails - ONLY these emails should be admins
   const knownAdmins = [
     'matthew.enarle@ecloudvalley.com',
-    'matt@example.com'
   ]
   
-  // Check if it's one of the known admin emails
-  if (knownAdmins.includes(lowerUsername)) {
-    return true
-  }
-  
-  // Check for admin patterns in the username
-  return lowerUsername.includes('admin') || 
-         lowerUsername.includes('test') || 
-         lowerUsername.includes('matt') || 
-         lowerUsername.includes('ecloudvalley')
+  // ONLY check against the explicit list of admin emails
+  // No pattern matching to avoid false positives
+  return knownAdmins.includes(lowerUsername)
 }
 
 // Methods
@@ -241,6 +233,12 @@ const handleLogin = async () => {
     
     // If we get here, standard authentication without MFA
     const tokens = result as any // The result contains tokens
+    
+    // Store tokens in localStorage immediately after login
+    // This ensures they're available throughout the flow
+    if (tokens.id_token) localStorage.setItem('id_token', tokens.id_token)
+    if (tokens.access_token) localStorage.setItem('access_token', tokens.access_token)
+    if (tokens.refresh_token) localStorage.setItem('refresh_token', tokens.refresh_token)
 
     // Check if user is admin - THIS CHECK MUST COME FIRST
     // This must override any URL parameters
@@ -341,14 +339,19 @@ const handleConsentApproved = async (scopes: string[]) => {
     // small delay to ensure authorization record is fully created
     await new Promise(resolve => setTimeout(resolve, 500))
     
+    // We don't need to refresh tokens before creating session
+    // The backend will automatically refresh tokens when creating a new session
+    // if they're expired or about to expire
+    let tokens = userTokens.value
+    
     // authorization was already created by the consent screen
-    // now create session with the authorized user
-    const sessionResponse = await api.initSession(userTokens.value, appName.value)
+    // now create session with the potentially refreshed tokens
+    const sessionResponse = await api.initSession(tokens, appName.value)
     
     toast.success('Welcome to The Grind!')
     
     // redirect back to client app with session_id
-    if (sessionResponse) {
+    if (sessionResponse && sessionResponse.session_id) {
       setTimeout(() => {
         const redirectUrl = route.query.redirect_url as string || 'http://localhost:8080'
         window.location.href = `${redirectUrl}?session_id=${sessionResponse.session_id}`

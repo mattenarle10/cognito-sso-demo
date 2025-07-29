@@ -10,10 +10,9 @@ export const apiClient = axios.create({
   }
 })
 
-// request interceptor
+// request interceptor to add auth header if available
 apiClient.interceptors.request.use(
   (config) => {
-    // add auth header if available
     const token = localStorage.getItem('id_token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
@@ -23,11 +22,11 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// response interceptor
+// response interceptor to handle errors
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error('api error:', error.response?.data || error.message)
     return Promise.reject(error)
   }
-) 
+)

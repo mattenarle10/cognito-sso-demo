@@ -12,7 +12,8 @@ export const API_CONFIG = {
     validateAppChannel: '/validate-app-channel',
     checkAppUser: '/check-app-user', 
     initSession: '/init-session',
-    getSession: '/get-session'
+    getSession: '/get-session',
+    authorizeApplication: '/authorize-application'
   }
 }
 

@@ -71,7 +71,7 @@
             class="flex-1"
         >
             <span v-if="loading">authorizing...</span>
-            <span v-else">allow access</span>
+            <span v-else>allow access</span>
           </AuthButton>
       </div>
              </AuthCard>
@@ -114,20 +114,37 @@ const approveConsent = async () => {
   error.value = ''
 
   try {
-    // Simple authorization - just basic access
+    // Use the token provided to the component or fallback to localStorage
+    // This ensures we always use the most recent token
+    const idToken = props.idToken || localStorage.getItem('id_token')
+    
+    if (!idToken) {
+      throw new Error('No authentication token available')
+    }
+    
+    console.log('Proceeding with authorization using token')
     const response = await api.authorizeApplication({
       application_id: props.applicationId,
       granted_scopes: ['profile', 'email'],
       action: 'approve'
-    }, props.idToken)
+    }, idToken)
 
     if (response && response.status === 'approved') {
       emit('approved', ['profile', 'email'])
     } else {
-      throw new Error('authorization failed')
+      throw new Error('Authorization failed')
     }
   } catch (err: any) {
-    error.value = err.message || 'failed to authorize application'
+    console.error('Consent approval error:', err)
+    
+    // Check if this is a token expiration error
+    if (err.message?.toLowerCase().includes('expired') || 
+        (err.response?.data?.error_code === 'INVALID_TOKEN')) {
+      error.value = 'Your session has expired. Please log in again.'
+    } else {
+      error.value = err.message || 'Failed to authorize application'
+    }
+    
     emit('error', error.value)
   } finally {
     loading.value = false
