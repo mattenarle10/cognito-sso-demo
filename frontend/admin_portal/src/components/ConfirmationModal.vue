@@ -9,8 +9,11 @@
         <p>{{ message }}</p>
       </div>
       <div class="modal-footer">
-        <button class="btn-danger" @click="$emit('confirm')">{{ confirmText }}</button>
-        <button class="btn-secondary" @click="$emit('cancel')">Cancel</button>
+        <button class="btn-danger" @click="$emit('confirm')" :disabled="loading">
+          <span v-if="loading" class="spinner-small"></span>
+          {{ loading ? 'Processing...' : confirmText }}
+        </button>
+        <button class="btn-secondary" @click="$emit('cancel')" :disabled="loading">Cancel</button>
       </div>
     </div>
   </div>
@@ -22,6 +25,7 @@ defineProps<{
   title: string;
   message: string;
   confirmText: string;
+  loading?: boolean;
 }>();
 
 defineEmits<{
@@ -134,5 +138,26 @@ defineEmits<{
 
 .btn-secondary:hover {
   background-color: #e9ecef;
+}
+
+.btn-danger:disabled, .btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: spin 1s ease-in-out infinite;
+  display: inline-block;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>

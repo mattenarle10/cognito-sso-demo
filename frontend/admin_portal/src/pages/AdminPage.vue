@@ -20,7 +20,10 @@
       <button class="btn-secondary" @click="resetSearch">Reset</button>
     </div>
 
-    <div class="loading-indicator" v-if="loading">Loading...</div>
+    <div class="loading-indicator" v-if="loading">
+      <div class="spinner"></div>
+      <span>Loading...</span>
+    </div>
     <div class="error-message" v-if="error">{{ error }}</div>
 
     <UserTable 
@@ -29,6 +32,7 @@
       @disable-user="confirmDisableUser" 
       @enable-user="confirmEnableUser"
       @reset-password="confirmResetPassword"
+      @change-name="confirmChangeName"
       @delete-user="confirmDeleteUser"
     />
 
@@ -61,8 +65,16 @@
       :title="confirmationTitle"
       :message="confirmationMessage"
       :confirm-text="confirmationButtonText"
+      :loading="loading"
       @confirm="handleConfirmation"
       @cancel="closeConfirmationModal"
+    />
+    
+    <EditUserNameModal
+      :is-open="editNameModalOpen"
+      :user="selectedUser"
+      @cancel="closeEditNameModal"
+      @saved="handleNameUpdated"
     />
   </div>
 </template>
@@ -74,6 +86,7 @@ import { UserService, type User } from '../services/UserService';
 import UserTable from '../components/UserTable.vue';
 import UserModal from '../components/UserModal.vue';
 import ConfirmationModal from '../components/ConfirmationModal.vue';
+import EditUserNameModal from '../components/EditUserNameModal.vue';
 
 // Define props
 const props = defineProps<{
@@ -102,6 +115,7 @@ const searchQuery = ref('');
 const userModalOpen = ref(false);
 const selectedUser = ref<User | null>(null);
 const confirmationModalOpen = ref(false);
+const editNameModalOpen = ref(false);
 const confirmationTitle = ref('');
 const confirmationMessage = ref('');
 const confirmationButtonText = ref('');
@@ -300,6 +314,23 @@ async function deleteUser() {
     loading.value = false;
   }
 }
+
+// Name editing functions
+function confirmChangeName(user: User) {
+  selectedUser.value = user;
+  editNameModalOpen.value = true;
+}
+
+function closeEditNameModal() {
+  editNameModalOpen.value = false;
+}
+
+async function handleNameUpdated() {
+  // Close the modal
+  editNameModalOpen.value = false;
+  // Refresh user list to show updated name
+  await loadUsers();
+}
 </script>
 
 <style scoped>
@@ -409,9 +440,58 @@ async function deleteUser() {
   border-color: var(--primary-color);
 }
 
-.btn-secondary:disabled {
+.btn-secondary:disabled, .btn-danger:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Loading indicator styles */
+.loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  color: #495057;
+  font-weight: 500;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(0, 119, 204, 0.2);
+  border-radius: 50%;
+  border-top-color: #0077cc;
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 0.75rem;
+}
+
+.spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: spin 1s ease-in-out infinite;
+  display: inline-block;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-message {
+  background-color: #fff5f5;
+  color: #e03131;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  border-left: 4px solid #e03131;
+  font-weight: 500;
 }
 
 @media (max-width: 768px) {

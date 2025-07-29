@@ -67,4 +67,11 @@ export class UserService {
   static async deleteUser(userId: string): Promise<any> {
     return api.deleteUser(userId);
   }
+
+  /**
+   * Update user attributes (e.g., name, phone number)
+   */
+  static async updateUser(userId: string, attributes: Record<string, string>): Promise<any> {
+    return api.updateUser(userId, attributes);
+  }
 }

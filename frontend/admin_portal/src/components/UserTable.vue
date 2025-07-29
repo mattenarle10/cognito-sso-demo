@@ -36,6 +36,9 @@
             <button class="btn-action reset" @click="$emit('reset-password', user)" title="Reset Password">
               <i class="fas fa-key"></i>
             </button>
+            <button class="btn-action edit" @click="$emit('change-name', user)" title="Change Name">
+              <i class="fas fa-user-edit"></i>
+            </button>
             <button class="btn-action delete" @click="$emit('delete-user', user)" title="Delete User">
               <i class="fas fa-trash-alt"></i>
             </button>
@@ -76,6 +79,7 @@ defineEmits<{
   (e: 'disable-user', user: User): void
   (e: 'enable-user', user: User): void
   (e: 'reset-password', user: User): void
+  (e: 'change-name', user: User): void
   (e: 'delete-user', user: User): void
 }>();
 </script>
@@ -172,6 +176,11 @@ defineEmits<{
 .btn-action.reset {
   background-color: #fff9db;
   color: #f08c00;
+}
+
+.btn-action.edit {
+  background-color: #e3fafc;
+  color: #0c8599;
 }
 
 .btn-action.delete {
