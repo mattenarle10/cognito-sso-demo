@@ -2,15 +2,15 @@
   <AuthBackground>
     <AuthCard>
       <!-- Header with enhanced styling -->
-      <div class="mb-8 relative text-center">
+      <div class="mb-4 relative text-center">
         <div class="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-zinc-800/30 to-zinc-900/30 rounded-full blur-3xl"></div>
-        <h1 class="text-4xl lg:text-5xl font-bold tracking-tight mb-4 relative">
+        <h1 class="text-3xl font-bold tracking-tight mb-1 relative">
           <span class="bg-gradient-to-r from-gray-200 via-gray-100 to-gray-300 bg-clip-text text-transparent relative inline-block">Forgot Password</span>
         </h1>
-        <p class="text-zinc-500 font-light tracking-wide">Enter your email address to receive a password reset code.</p>
+        <p class="text-zinc-500 text-sm font-light tracking-wide" v-if="appName">to continue to {{ appName }}</p>
       </div>
 
-      <!-- Form with enhanced styling -->
+      <!-- Form with standard styling -->
       <form @submit.prevent="handleForgotPassword" class="space-y-5">
         <AuthInput
           id="email"
@@ -26,57 +26,56 @@
           </template>
         </AuthInput>
 
-        <!-- Error message -->
-        <div v-if="error" class="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm">
+        <!-- Submit Button -->
+        <AuthButton
+          type="submit"
+          :loading="loading"
+          :disabled="!isEmailValid || loading"
+          class="w-full"
+        >
+          <span class="flex items-center justify-center gap-2">
+            Send Reset Code
+            <ArrowRightIcon :size="16" />
+          </span>
+        </AuthButton>
+
+        <!-- Back to Login Link -->
+        <div class="flex flex-col items-center gap-2 pt-1">
+          <router-link 
+            to="/login" 
+            class="text-zinc-500 hover:text-zinc-400 text-xs transition-colors duration-200"
+          >
+            Return to login
+          </router-link>
+        </div>
+
+        <!-- Error Display -->
+        <div v-if="error" class="bg-red-900/20 border border-red-800/50 text-red-400 text-xs py-2 px-3 rounded-lg mt-2">
           {{ error }}
         </div>
 
         <!-- Success message -->
-        <div v-if="success" class="bg-green-500/10 border border-green-500/20 text-green-400 px-4 py-3 rounded-lg text-sm">
+        <div v-if="success" class="bg-green-900/20 border border-green-800/50 text-green-400 text-xs py-2 px-3 rounded-lg mt-2">
           {{ success }}
         </div>
-
-        <!-- Submit button -->
-        <div class="flex justify-center">
-          <AuthButton
-            type="submit"
-            :loading="loading"
-            :disabled="!isEmailValid || loading"
-            class="w-full md:w-2/3"
-          >
-            Send Reset Code
-            <ArrowRightIcon :size="16" class="ml-1 transition-transform duration-200" />
-          </AuthButton>   
-        </div>
       </form>
-
-      <!-- Footer with enhanced styling -->
-      <div class="mt-6 pt-5 border-t border-zinc-800/50 relative">
-        <!-- Border texture -->
-        <div class="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-zinc-700/30 to-transparent" />
-        <p class="text-center text-zinc-400 text-sm">
-          Remember your password?
-          <router-link
-            to="/login"
-            class="text-zinc-200 hover:text-white font-medium underline underline-offset-2 decoration-zinc-600 hover:decoration-zinc-400 transition-all duration-200 inline-flex items-center gap-1"
-          >
-            Back to login
-            <ArrowLeftIcon :size="10" class="opacity-60" />
-          </router-link>
-        </p>
-      </div>
     </AuthCard>
   </AuthBackground>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { MailIcon, ArrowRightIcon, ArrowLeftIcon } from 'lucide-vue-next'
+import { useRouter, useRoute } from 'vue-router'
+import { MailIcon, ArrowRightIcon } from 'lucide-vue-next'
 import { useToast } from 'vue-toastification'
+import AuthBackground from '../components/ui/AuthBackground.vue'
+import AuthCard from '../components/ui/AuthCard.vue'
+import AuthInput from '../components/ui/AuthInput.vue'
+import AuthButton from '../components/ui/AuthButton.vue'
 
 // Component setup
 const router = useRouter()
+const route = useRoute()
 const toast = useToast()
 
 // Form data
@@ -85,6 +84,11 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 const errors = ref<Record<string, string>>({})
+
+// Get params from route
+const appName = computed(() => route.query.application_name as string)
+const channelId = computed(() => route.query.channel_id as string)
+const redirectUrl = computed(() => route.query.redirect_url as string)
 
 // Computed
 const isEmailValid = computed(() => {

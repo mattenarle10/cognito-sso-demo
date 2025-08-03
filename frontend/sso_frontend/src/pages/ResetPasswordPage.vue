@@ -1,52 +1,43 @@
 <template>
   <AuthBackground>
     <AuthCard>
-      <!-- Header with enhanced styling -->
-      <div class="mb-8 relative text-center">
+      <!-- Header with standard styling -->
+      <div class="mb-4 relative text-center">
         <div class="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-zinc-800/30 to-zinc-900/30 rounded-full blur-3xl"></div>
-        <h1 class="text-4xl lg:text-5xl font-bold tracking-tight mb-4 relative">
+        <h1 class="text-3xl font-bold tracking-tight mb-1 relative">
           <span class="bg-gradient-to-r from-gray-200 via-gray-100 to-gray-300 bg-clip-text text-transparent relative inline-block">Reset Password</span>
         </h1>
-        <p class="text-zinc-500 font-light tracking-wide">Enter the verification code sent to your email and create a new password.</p>
+        <p class="text-zinc-500 text-sm font-light tracking-wide" v-if="appName">to continue to {{ appName }}</p>
+        <p class="text-zinc-400 text-sm mt-3 bg-zinc-800/50 py-2 px-3 rounded-lg inline-block">
+          <span class="text-zinc-300">Code sent to:</span> {{ email }}
+        </p>
       </div>
 
-      <!-- Form with enhanced styling -->
+      <!-- Form with standard styling -->
       <form @submit.prevent="handleResetPassword" class="space-y-5">
-        <!-- Email display (readonly) -->
-        <AuthInput
-          id="email"
-          type="email"
-          label="Email Address"
-          v-model="email"
-          :required="true"
-          :disabled="true"
-          class="cursor-not-allowed opacity-70"
-          readonly
-        >
-          <template #icon>
-            <MailIcon :size="14" class="text-zinc-500" />
-          </template>
-        </AuthInput>
-
-        <!-- Verification Code -->
+        <!-- Verification Code Input Boxes -->
         <div>
           <label for="code" class="block text-sm font-medium text-zinc-400 mb-1">Verification Code</label>
-          <div class="flex items-center justify-center space-x-2">
-            <template v-for="(_, index) in 6" :key="index">
+          <div class="flex justify-center gap-2 mt-2">
+            <div 
+              v-for="(_, index) in 6" 
+              :key="index"
+              class="relative"
+            >
               <input
                 type="text"
                 maxlength="1"
+                :id="`reset-code-${index}`"
                 v-model="codeDigits[index]"
-                @input="handleCodeInput(index, $event)"
+                @input="handleCodeInput(index)"
                 @keydown="handleKeyDown($event, index)"
                 @paste="handlePaste"
-                class="w-12 h-12 rounded-lg bg-zinc-800/80 border border-zinc-700/80 text-center text-xl font-medium text-white focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500/70 focus:outline-none transition-all duration-200"
-                :class="{ 'border-red-500': errors.code }"
-                ref="codeInputRefs"
+                class="w-11 h-14 bg-zinc-900/60 border border-zinc-700/60 text-white text-center text-xl font-medium rounded-lg focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 transition-all duration-200"
               />
-            </template>
+              <div class="absolute inset-0 bg-gradient-to-r from-zinc-800/5 to-transparent rounded-lg pointer-events-none" />
+            </div>
           </div>
-          <p v-if="errors.code" class="mt-1 text-sm text-red-400">{{ errors.code }}</p>
+          <p v-if="errors.code" class="text-red-400 text-xs mt-2 text-center">{{ errors.code }}</p>
         </div>
 
         <!-- New Password -->
@@ -121,44 +112,39 @@
           </template>
         </AuthInput>
 
-        <!-- Error message -->
-        <div v-if="error" class="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm">
+        <!-- Submit Button -->
+        <AuthButton
+          type="submit"
+          :loading="loading"
+          :disabled="!isFormValid || loading"
+          class="w-full"
+        >
+          <span class="flex items-center justify-center gap-2">
+            Reset Password
+            <ArrowRightIcon :size="16" />
+          </span>
+        </AuthButton>
+
+        <!-- Back and resend links -->
+        <div class="flex flex-col items-center gap-2 pt-1">
+          <router-link 
+            to="/forgot-password"
+            class="text-zinc-500 hover:text-zinc-400 text-xs transition-colors duration-200"
+          >
+            Request a new code
+          </router-link>
+        </div>
+
+        <!-- Error Display -->
+        <div v-if="error" class="bg-red-900/20 border border-red-800/50 text-red-400 text-xs py-2 px-3 rounded-lg mt-2">
           {{ error }}
         </div>
 
         <!-- Success message -->
-        <div v-if="success" class="bg-green-500/10 border border-green-500/20 text-green-400 px-4 py-3 rounded-lg text-sm">
+        <div v-if="success" class="bg-green-900/20 border border-green-800/50 text-green-400 text-xs py-2 px-3 rounded-lg mt-2">
           {{ success }}
         </div>
-
-        <!-- Submit button -->
-        <div class="flex justify-center">
-          <AuthButton
-            type="submit"
-            :loading="loading"
-            :disabled="!isFormValid || loading"
-            class="w-full md:w-2/3"
-          >
-            Reset Password
-            <ArrowRightIcon :size="16" class="ml-1 transition-transform duration-200" />
-          </AuthButton>   
-        </div>
       </form>
-
-      <!-- Footer with enhanced styling -->
-      <div class="mt-6 pt-5 border-t border-zinc-800/50 relative">
-        <!-- Border texture -->
-        <div class="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-zinc-700/30 to-transparent" />
-        <p class="text-center text-zinc-400 text-sm">
-          <router-link
-            to="/forgot-password"
-            class="text-zinc-200 hover:text-white font-medium underline underline-offset-2 decoration-zinc-600 hover:decoration-zinc-400 transition-all duration-200 inline-flex items-center gap-1"
-          >
-            <ArrowLeftIcon :size="10" class="opacity-60" />
-            Request a new code
-          </router-link>
-        </p>
-      </div>
     </AuthCard>
   </AuthBackground>
 </template>
@@ -166,14 +152,22 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { MailIcon, LockIcon, CheckIcon, XIcon, ArrowRightIcon, ArrowLeftIcon } from 'lucide-vue-next'
+import { LockIcon, CheckIcon, XIcon, ArrowRightIcon } from 'lucide-vue-next'
 import { useToast } from 'vue-toastification'
+import AuthBackground from '../components/ui/AuthBackground.vue'
+import AuthCard from '../components/ui/AuthCard.vue'
+import AuthInput from '../components/ui/AuthInput.vue'
+import AuthButton from '../components/ui/AuthButton.vue'
 
 // Component setup
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
-const codeInputRefs = ref<HTMLInputElement[]>([])
+
+// Get params from route
+const appName = computed(() => route.query.application_name as string)
+const channelId = computed(() => route.query.channel_id as string)
+const redirectUrl = computed(() => route.query.redirect_url as string)
 
 // Form data
 const email = ref('')
@@ -185,14 +179,15 @@ const error = ref('')
 const success = ref('')
 const errors = ref<Record<string, string>>({})
 
-// On component mount, set email from query param
+// On component mount, get query params from URL and set up form
 onMounted(() => {
   email.value = route.query.email as string || ''
   
   // Focus first input field
   nextTick(() => {
-    if (codeInputRefs.value[0]) {
-      codeInputRefs.value[0].focus()
+    const firstInput = document.getElementById('reset-code-0') as HTMLInputElement
+    if (firstInput) {
+      firstInput.focus()
     }
   })
 })
@@ -218,9 +213,8 @@ const isFormValid = computed(() => {
 })
 
 // Methods for verification code input handling
-const handleCodeInput = (index: number, event: Event) => {
-  const target = event.target as HTMLInputElement
-  const value = target.value
+const handleCodeInput = (index: number) => {
+  const value = codeDigits.value[index]
   
   // Only allow numbers
   if (!/^\d*$/.test(value)) {
@@ -230,41 +224,35 @@ const handleCodeInput = (index: number, event: Event) => {
   
   // Move to next input
   if (value && index < 5) {
-    codeInputRefs.value[index + 1]?.focus()
+    const nextInput = document.getElementById(`reset-code-${index + 1}`) as HTMLInputElement
+    if (nextInput) nextInput.focus()
   }
 }
 
 const handleKeyDown = (event: KeyboardEvent, index: number) => {
-  // Move to previous input on backspace if current input is empty
+  // If backspace is pressed and current input is empty, focus previous input
   if (event.key === 'Backspace' && !codeDigits.value[index] && index > 0) {
-    codeInputRefs.value[index - 1]?.focus()
+    const prevInput = document.getElementById(`reset-code-${index - 1}`) as HTMLInputElement
+    if (prevInput) prevInput.focus()
   }
 }
 
 const handlePaste = (event: ClipboardEvent) => {
   event.preventDefault()
+  const pasteData = event.clipboardData?.getData('text')
+  if (!pasteData || !/^\d+$/.test(pasteData)) return
   
-  const pastedData = event.clipboardData?.getData('text')
-  if (!pastedData) return
+  // Fill in as many digits as we can
+  const digits = pasteData.slice(0, 6).split('')
+  codeDigits.value = [...digits, ...Array(6 - digits.length).fill('')]
   
-  // Extract digits from pasted data
-  const digits = pastedData.replace(/\D/g, '').split('').slice(0, 6)
-  
-  // Fill in available digits
-  digits.forEach((digit, index) => {
-    if (index < 6) {
-      codeDigits.value[index] = digit
-    }
-  })
-  
-  // Focus the next empty input or the last one if all filled
-  const nextEmptyIndex = codeDigits.value.findIndex(d => !d)
-  if (nextEmptyIndex >= 0) {
-    codeInputRefs.value[nextEmptyIndex]?.focus()
-  } else {
-    codeInputRefs.value[5]?.focus()
+  // Focus on appropriate input
+  if (digits.length < 6) {
+    const nextInput = document.getElementById(`reset-code-${digits.length}`) as HTMLInputElement
+    if (nextInput) nextInput.focus()
   }
 }
+
 
 // Form submission
 const handleResetPassword = async () => {
