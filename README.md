@@ -52,7 +52,7 @@ A serverless application implementing Single Sign-On (SSO) with AWS Cognito, Dyn
 /cognito-hop/
 ├── backend/
 │   ├── sso_backend/         # SSO backend services
-│   │   └── admin/           # Admin-specific APIs
+│   |── admin_backend/       # Admin-specific APIs
 │   └── client_backend/      # Client application backend
 └── frontend/
     ├── sso_frontend/        # SSO interface (Vue.js)
@@ -103,37 +103,3 @@ cd frontend/client_app
 npm install
 npm run dev
 ```
-
-## Project Status
-
-### Completed ✅
-- ✅ **Complete SSO System**: Full authentication and authorization flow
-- ✅ **Backend APIs**: All endpoints implemented and tested
-  - ✅ User authentication and session management
-  - ✅ OAuth-style authorization with consent screens
-  - ✅ Profile management with Cognito+DynamoDB sync
-  - ✅ Authorization management (list/revoke permissions)
-- ✅ **SSO Frontend**: Modern Vue.js authentication interface
-  - ✅ Login, registration, and email verification
-  - ✅ Account management with profile editing
-  - ✅ Authorization management interface
-  - ✅ Modern dark theme with 3D effects
-- ✅ **Client Application**: Complete business application
-  - ✅ Authentication integration with SSO
-  - ✅ Protected routes and content
-  - ✅ Profile management integration
-  - ✅ Orders management
-
-### Ready for Production
-- ✅ End-to-end authentication flow working
-- ✅ Session-based SSO between applications
-- ✅ Profile editing with real-time validation
-- ✅ Authorization management system
-- ✅ Modern responsive UI/UX
-
-### Next Steps
-- 📚 Production deployment guides
-- 🔒 Security audit and hardening
-- 📱 Mobile app integration
-- 👥 Multi-application management
-- 🔐 Advanced security features (MFA, etc.)

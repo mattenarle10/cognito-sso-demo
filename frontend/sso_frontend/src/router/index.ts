@@ -56,6 +56,16 @@ const router = createRouter({
       path: '/phone-otp',
       name: 'phone-otp',
       component: () => import('@/pages/PhoneOtpPage.vue'),
+    },
+    {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: () => import('@/pages/ForgotPasswordPage.vue'),
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: () => import('@/pages/ResetPasswordPage.vue'),
     }
   ],
 })
