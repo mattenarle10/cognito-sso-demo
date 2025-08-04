@@ -136,11 +136,11 @@ export const useAuthStore = defineStore('auth', () => {
         
         if (sessionId) {
           // Call the SSO backend to revoke the session
-          const response = await fetch(`${import.meta.env.VITE_SSO_API_URL}/sessions/${sessionId}/revoke`, {
-            method: 'POST',
+          // Using the correct endpoint format that works in the SSO frontend
+          const response = await fetch(`${import.meta.env.VITE_SSO_API_URL}/user-sessions/${sessionId}`, {
+            method: 'DELETE',
             headers: {
-              'Authorization': `Bearer ${tokens.value.id_token}`,
-              'Content-Type': 'application/json'
+              'Authorization': `Bearer ${tokens.value.id_token}`
             }
           })
           
