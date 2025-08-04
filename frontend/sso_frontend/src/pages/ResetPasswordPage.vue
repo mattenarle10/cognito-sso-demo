@@ -314,7 +314,19 @@ const handleResetPassword = async () => {
       })
     }, 2000)
   } catch (err: any) {
-    error.value = err.message || 'Failed to reset password. Please try again.'
+    // Check if this is a password reuse error
+    if (err.message && err.message.includes('cannot reuse a previous password')) {
+      error.value = err.message
+      // Reset password fields to allow the user to enter a new password
+      password.value = ''
+      confirmPassword.value = ''
+      // Focus on password field
+      nextTick(() => {
+        document.getElementById('password')?.focus()
+      })
+    } else {
+      error.value = err.message || 'Failed to reset password. Please try again.'
+    }
   } finally {
     loading.value = false
   }

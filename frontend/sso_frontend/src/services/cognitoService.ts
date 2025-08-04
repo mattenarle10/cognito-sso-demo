@@ -429,6 +429,11 @@ class CognitoService {
   private handleCognitoError(error: any): Error {
     const errorCode = error.name || error.__type
     
+    // Check for password reuse error in message first (Cognito returns this as InvalidParameterException)
+    if (error.message && error.message.includes('Password did not conform to policy: Password not in history')) {
+      return new Error('You cannot reuse a previous password. Please choose a different password.')
+    }
+    
     switch (errorCode) {
       case 'NotAuthorizedException':
         return new Error('invalid email or password')
