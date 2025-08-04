@@ -17,20 +17,20 @@ A serverless application implementing Single Sign-On (SSO) with AWS Cognito, Dyn
   - Orders management
 
 ### Frontend Applications
-- **SSO Frontend** ✅ COMPLETED
+- **SSO Frontend** 
   - Vue.js application for authentication
   - Login and registration with verification
   - Security consent screens
   - Account management with profile editing
   - Authorization management interface
   
-- **Client Application** ✅ COMPLETED
+- **Client Application** 
   - Vue.js business application
   - Authentication integration
   - Protected content (orders)
   - Profile management integration
 
-- **Admin Portal** 🚧 PLANNED
+- **Admin Portal**
   - Vue 3 + Vite application for administrators
   - User management interface
   - User deactivation and deletion
@@ -79,13 +79,9 @@ A serverless application implementing Single Sign-On (SSO) with AWS Cognito, Dyn
 ### Backend Setup
 
 ```bash
-# SSO Backend
-cd backend/sso_backend
-npm install
-sls deploy
-
-# Client Backend
-cd backend/client_backend
+# SSO Backend, Client Backend, Admin Portal, 
+cd backend/sso_backend, client_backend, admin_backend
+export AWS_PROFILE={your-profile}
 npm install
 sls deploy
 ```
@@ -94,12 +90,7 @@ sls deploy
 
 ```bash
 # SSO Frontend
-cd frontend/sso_frontend
-npm install
-npm run dev
-
-# Client Frontend
-cd frontend/client_app
+cd frontend/sso_frontend, client_app, admin_portal
 npm install
 npm run dev
 ```
