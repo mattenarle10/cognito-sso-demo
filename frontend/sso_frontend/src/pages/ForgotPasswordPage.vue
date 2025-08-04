@@ -72,6 +72,7 @@ import AuthBackground from '../components/ui/AuthBackground.vue'
 import AuthCard from '../components/ui/AuthCard.vue'
 import AuthInput from '../components/ui/AuthInput.vue'
 import AuthButton from '../components/ui/AuthButton.vue'
+import { cognitoService } from '../services/cognitoService'
 
 // Component setup
 const router = useRouter()
@@ -112,9 +113,12 @@ const handleForgotPassword = async () => {
   try {
     loading.value = true
 
-    // TODO: Replace with actual Cognito forgotPassword API call
-    // For now, we'll simulate the API call with a timeout
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    // Call Cognito forgotPassword API
+    await cognitoService.forgotPassword({
+      email: email.value,
+      applicationName: appName.value,
+      channelId: channelId.value
+    })
     
     // Show success message
     success.value = 'Reset code sent to your email. You will be redirected shortly.'
@@ -126,7 +130,12 @@ const handleForgotPassword = async () => {
     setTimeout(() => {
       router.push({
         path: '/reset-password',
-        query: { email: email.value }
+        query: { 
+          email: email.value,
+          application_name: appName.value,
+          channel_id: channelId.value,
+          redirect_url: redirectUrl.value
+        }
       })
     }, 2000)
   } catch (err: any) {

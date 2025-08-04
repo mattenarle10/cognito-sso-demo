@@ -158,6 +158,7 @@ import AuthBackground from '../components/ui/AuthBackground.vue'
 import AuthCard from '../components/ui/AuthCard.vue'
 import AuthInput from '../components/ui/AuthInput.vue'
 import AuthButton from '../components/ui/AuthButton.vue'
+import { cognitoService } from '../services/cognitoService'
 
 // Component setup
 const route = useRoute()
@@ -253,7 +254,6 @@ const handlePaste = (event: ClipboardEvent) => {
   }
 }
 
-
 // Form submission
 const handleResetPassword = async () => {
   // Reset error state
@@ -286,9 +286,14 @@ const handleResetPassword = async () => {
   try {
     loading.value = true
     
-    // TODO: Replace with actual Cognito confirmForgotPassword API call
-    // For now, we'll simulate the API call with a timeout
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    // Call Cognito confirmForgotPassword API
+    await cognitoService.confirmForgotPassword({
+      email: email.value,
+      code: verificationCode,
+      newPassword: password.value,
+      applicationName: appName.value,
+      channelId: channelId.value
+    })
     
     // Show success message
     success.value = 'Password successfully reset. Redirecting to login...'
@@ -300,7 +305,12 @@ const handleResetPassword = async () => {
     setTimeout(() => {
       router.push({
         path: '/login',
-        query: { verified: 'password_reset' }
+        query: { 
+          verified: 'password_reset',
+          application_name: appName.value,
+          channel_id: channelId.value,
+          redirect_url: redirectUrl.value
+        }
       })
     }, 2000)
   } catch (err: any) {

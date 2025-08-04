@@ -7,11 +7,15 @@ import {
   GetUserCommand,
   RespondToAuthChallengeCommand,
   SetUserMFAPreferenceCommand,
+  ForgotPasswordCommand,
+  ConfirmForgotPasswordCommand,
   type InitiateAuthCommandInput,
   type SignUpCommandInput,
   type ConfirmSignUpCommandInput,
   type RespondToAuthChallengeCommandInput,
   type SetUserMFAPreferenceCommandInput,
+  type ForgotPasswordCommandInput,
+  type ConfirmForgotPasswordCommandInput,
   ChallengeNameType
 } from '@aws-sdk/client-cognito-identity-provider'
 import { cognitoConfig } from '../config/cognito'
@@ -64,6 +68,20 @@ export interface MfaRequiredResponse {
 
 // Union type for authentication results
 export type AuthResult = CognitoTokens | MfaRequiredResponse
+
+export interface ForgotPasswordParams {
+  email: string
+  applicationName?: string
+  channelId?: string
+}
+
+export interface ConfirmForgotPasswordParams {
+  email: string
+  code: string
+  newPassword: string
+  applicationName?: string
+  channelId?: string
+}
 
 class CognitoService {
   async signIn({ email, password, applicationName, channelId }: SignInParams): Promise<AuthResult> {
@@ -350,6 +368,64 @@ class CognitoService {
     }
   }
 
+  /**
+   * Initiates the forgot password flow by sending a reset code to the user's email
+   * @param email User's email address
+   * @param applicationName Optional application name for client metadata
+   * @param channelId Optional channel ID for client metadata
+   * @returns Promise<void>
+   */
+  async forgotPassword({ email, applicationName, channelId }: ForgotPasswordParams): Promise<void> {
+    const params: ForgotPasswordCommandInput = {
+      ClientId: cognitoConfig.clientId,
+      Username: email,
+      ClientMetadata: {
+        application_name: applicationName || '',
+        channel_id: channelId || ''
+      }
+    }
+
+    try {
+      const command = new ForgotPasswordCommand(params)
+      await cognitoClient.send(command)
+      console.log('[Cognito] Forgot password code sent to:', email)
+    } catch (error: any) {
+      console.error('[Cognito] Forgot password error:', error)
+      throw this.handleCognitoError(error)
+    }
+  }
+
+  /**
+   * Confirms the forgot password flow by validating the code and setting a new password
+   * @param email User's email address
+   * @param code The verification code received via email
+   * @param newPassword The new password to set
+   * @param applicationName Optional application name for client metadata
+   * @param channelId Optional channel ID for client metadata
+   * @returns Promise<void>
+   */
+  async confirmForgotPassword({ email, code, newPassword, applicationName, channelId }: ConfirmForgotPasswordParams): Promise<void> {
+    const params: ConfirmForgotPasswordCommandInput = {
+      ClientId: cognitoConfig.clientId,
+      Username: email,
+      ConfirmationCode: code,
+      Password: newPassword,
+      ClientMetadata: {
+        application_name: applicationName || '',
+        channel_id: channelId || ''
+      }
+    }
+
+    try {
+      const command = new ConfirmForgotPasswordCommand(params)
+      await cognitoClient.send(command)
+      console.log('[Cognito] Password reset successful for:', email)
+    } catch (error: any) {
+      console.error('[Cognito] Confirm forgot password error:', error)
+      throw this.handleCognitoError(error)
+    }
+  }
+  
   private handleCognitoError(error: any): Error {
     const errorCode = error.name || error.__type
     
