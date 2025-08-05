@@ -1,6 +1,7 @@
 # Ignore all markdown files except README.md
 *.md
 !README.md
+.gitignore
 
 # Python
 __pycache__/
@@ -30,7 +31,8 @@ node_modules/
 
 # Environment variables
 .env.*
-!.env.example.yml
+.env.dev.yml
+
 
 # IDE
 .idea/
