@@ -167,11 +167,16 @@ const isFormValid = computed(() => {
 })
 
 onMounted(() => {
-  // Check if we have all required parameters
-  if (!email.value || !session.value) {
-    error.value = 'Missing required information. Please return to the login page.'
+  // Check if we have the required email parameter
+  if (!email.value) {
+    error.value = 'Missing email information. Please return to the login page.'
   }
+  
+  // Note: We don't require session anymore as we handle both session-based and code-based flows
 })
+
+// Get verification code from query params (for code-based flow)
+const verificationCode = ref(route.query.code as string || '')
 
 // Handle form submission
 const handleSubmit = async () => {
@@ -195,15 +200,53 @@ const handleSubmit = async () => {
 
   try {
     loading.value = true
-
-    // Submit new password to complete the challenge
-    const tokens = await cognitoService.respondToNewPasswordRequired({
-      email: email.value,
-      session: session.value,
-      newPassword: formData.value.newPassword,
-      applicationName: applicationName.value,
-      channelId: channelId.value
-    })
+    let tokens = null
+    
+    // Determine which flow to use based on available parameters
+    if (session.value) {
+      // Session-based flow (NEW_PASSWORD_REQUIRED challenge)
+      console.log('[ForcePasswordReset] Using session-based flow with NEW_PASSWORD_REQUIRED challenge')
+      tokens = await cognitoService.respondToNewPasswordRequired({
+        email: email.value,
+        session: session.value,
+        newPassword: formData.value.newPassword,
+        applicationName: applicationName.value,
+        channelId: channelId.value
+      })
+    } else if (verificationCode.value) {
+      // Code-based flow (ForgotPassword flow)
+      console.log('[ForcePasswordReset] Using code-based flow with verification code')
+      await cognitoService.confirmForgotPassword({
+        email: email.value,
+        code: verificationCode.value,
+        newPassword: formData.value.newPassword,
+        applicationName: applicationName.value,
+        channelId: channelId.value
+      })
+      // No tokens returned from confirmForgotPassword, user will need to log in again
+    } else {
+      // No session or code - initiate forgot password flow
+      console.log('[ForcePasswordReset] No session or code available, initiating forgot password flow')
+      await cognitoService.forgotPassword({
+        email: email.value,
+        applicationName: applicationName.value,
+        channelId: channelId.value
+      })
+      
+      toast.info('A verification code has been sent to your email. Please check your inbox and enter the code to reset your password.')
+      
+      // Redirect to the regular reset password page
+      router.push({
+        name: 'reset-password',
+        query: {
+          email: email.value,
+          application_name: applicationName.value,
+          channel_id: channelId.value,
+          redirect_url: redirectUrl.value
+        }
+      })
+      return
+    }
 
     // Show success message
     toast.success('Password has been successfully updated!')

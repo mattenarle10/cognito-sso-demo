@@ -158,7 +158,17 @@ class CognitoService {
       }
     } catch (error: any) {
       console.error('cognito signin error:', error)
-      throw this.handleCognitoError(error)
+      const result = this.handleCognitoError(error)
+      
+      // If the error handler returns an AuthResult (for special cases like PasswordResetRequiredException),
+      // return it directly instead of throwing
+      if (result && typeof result === 'object' && 'challengeName' in result) {
+        console.log('[Cognito] Returning challenge from error handler:', result.challengeName)
+        return result as AuthResult
+      }
+      
+      // Otherwise, throw the error as usual
+      throw result
     }
   }
   
@@ -514,8 +524,24 @@ class CognitoService {
     }
   }
   
-  private handleCognitoError(error: any): Error {
+  private handleCognitoError(error: any): Error | AuthResult {
     const errorCode = error.name || error.__type
+    
+    // Handle password reset required exception - convert to a challenge response
+    if (errorCode === 'PasswordResetRequiredException') {
+      console.log('[Cognito] PasswordResetRequiredException detected - converting to NEW_PASSWORD_REQUIRED challenge')
+      
+      // Extract email from the error context if possible
+      const email = error.username || ''
+      
+      // Return a challenge response similar to what we'd get from Cognito
+      return {
+        challengeName: 'NEW_PASSWORD_REQUIRED',
+        session: '', // No session available in this case
+        challengeParameters: {},
+        email: email
+      }
+    }
     
     // Check for password reuse error in message first (Cognito returns this as InvalidParameterException)
     if (error.message && error.message.includes('Password did not conform to policy: Password not in history')) {
