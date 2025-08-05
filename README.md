@@ -72,9 +72,9 @@ A serverless application implementing Single Sign-On (SSO) with AWS Cognito, Dyn
 ### Prerequisites
 
 - Node.js
-- Python
+- Python 3.12
 - AWS CLI configured
-- Serverless Framework
+- Serverless Framework v4.0
 
 ### Backend Setup
 
