@@ -106,8 +106,7 @@ class ApplicationRepository:
     def find_user_by_sub(self, cognito_sub):
         """
         Find a user by their Cognito sub.
-        Note: In production, this should use a GSI on the sub attribute.
-        For now, we'll scan the table (not efficient, but works for testing).
+        First tries direct lookup by sub, then falls back to email lookup if available.
         
         Args:
             cognito_sub (str): The Cognito sub
@@ -115,22 +114,53 @@ class ApplicationRepository:
         Returns:
             dict: The user item if found, None otherwise
         """
-        # This is a simplified implementation that scans the table
-        # In production, you would create a GSI on the sub attribute
-        
-        # For now, let's query items where SK = "user" and scan for matching sub
-        import boto3
-        from boto3.dynamodb.conditions import Key, Attr
+        from services.repositories.user_repository import UserRepository
         
         try:
+            # First attempt: direct lookup by sub (still using scan as there's no GSI for sub)
+            import boto3
+            from boto3.dynamodb.conditions import Key, Attr
+            
             # Scan for user records with matching sub
             response = self.dynamodb_service.dynamodb.Table(self.dynamodb_service.main_table_name).scan(
-                FilterExpression=Attr('SK').eq('user') & Attr('sub').eq(cognito_sub)
+                FilterExpression=Attr('SK').eq("user") & Attr('sub').eq(cognito_sub),
+                Limit=1  # We only need one match
             )
             
             items = response.get('Items', [])
             if items:
-                return items[0]  # Return the first matching user
+                print(f"Found user directly by sub: {cognito_sub}")
+                return items[0]
+            
+            # Second attempt: If user not found by sub, try to get their email from Cognito
+            # and use the GSI to find them by email
+            try:
+                from services.aws.cognito_user_service import CognitoUserService
+                cognito_service = CognitoUserService()
+                
+                # Get user attributes from Cognito using the sub
+                user_attributes = cognito_service.get_user_by_sub(cognito_sub)
+                if user_attributes and 'email' in user_attributes:
+                    email = user_attributes['email']
+                    print(f"Looking for user by email: {email} using GSI")
+                    
+                    # Use UserRepository to find by email using GSI1
+                    user_repo = UserRepository(self.dynamodb_service)
+                    user_item = user_repo.find_user_by_email(email)
+                    
+                    if user_item:
+                        print(f"Found user by email GSI: {email}")
+                        # Update the user's sub to match the new one
+                        user_item['sub'] = cognito_sub
+                        
+                        # Save the updated user item
+                        self.dynamodb_service.put_item(user_item)
+                        return user_item
+                    else:
+                        print(f"No user found with email: {email}")
+            except Exception as email_error:
+                print(f"Error finding user by email: {str(email_error)}")
+            
             return None
             
         except Exception as e:

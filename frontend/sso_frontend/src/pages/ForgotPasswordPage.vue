@@ -113,31 +113,44 @@ const handleForgotPassword = async () => {
   try {
     loading.value = true
 
-    // Call Cognito forgotPassword API
-    await cognitoService.forgotPassword({
-      email: email.value,
-      applicationName: appName.value,
-      channelId: channelId.value
-    })
-    
-    // Show success message
-    success.value = 'Reset code sent to your email. You will be redirected shortly.'
-    
-    // Show success toast
-    toast.success('Password reset code sent!')
-    
-    // Redirect to reset-password page after a short delay
-    setTimeout(() => {
-      router.push({
-        path: '/reset-password',
-        query: { 
-          email: email.value,
-          application_name: appName.value,
-          channel_id: channelId.value,
-          redirect_url: redirectUrl.value
-        }
+    // First check if the email exists in Cognito
+    try {
+      // Call Cognito forgotPassword API
+      await cognitoService.forgotPassword({
+        email: email.value,
+        applicationName: appName.value,
+        channelId: channelId.value
       })
-    }, 2000)
+      
+      // If we get here, the email exists in Cognito
+      // Show success message
+      success.value = 'Reset code sent to your email. You will be redirected shortly.'
+      
+      // Show success toast
+      toast.success('Password reset code sent!')
+      
+      // Redirect to reset-password page after a short delay
+      setTimeout(() => {
+        router.push({
+          path: '/reset-password',
+          query: { 
+            email: email.value,
+            application_name: appName.value,
+            channel_id: channelId.value,
+            redirect_url: redirectUrl.value
+          }
+        })
+      }, 2000)
+    } catch (cognitoError: any) {
+      // Check if the error is UserNotFoundException
+      if (cognitoError.name === 'UserNotFoundException' || 
+          cognitoError.message?.toLowerCase().includes('user not found')) {
+        error.value = 'No account found with this email address. Please check your email or sign up.'
+      } else {
+        // For other errors, pass through to the outer catch block
+        throw cognitoError
+      }
+    }
   } catch (err: any) {
     error.value = err.message || 'Failed to send reset code. Please try again.'
   } finally {

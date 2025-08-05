@@ -189,6 +189,56 @@ class CognitoUserService:
             else:
                 raise ClientError(e.response, e.operation_name)
                 
+    def get_user_by_sub(self, cognito_sub):
+        """
+        Get user attributes from Cognito using the user's sub
+        
+        Args:
+            cognito_sub (str): The Cognito sub (UUID) of the user
+            
+        Returns:
+            dict: User attributes from Cognito
+            
+        Raises:
+            ValueError: If cognito_sub is missing or invalid
+            ClientError: If Cognito API call fails
+        """
+        if not cognito_sub:
+            raise ValueError("Cognito sub is required")
+        
+        try:
+            # First, try to find the user by filtering on the sub attribute
+            response = self.cognito_client.list_users(
+                UserPoolId=self.user_pool_id,
+                Filter=f'sub = "{cognito_sub}"'
+            )
+            
+            users = response.get('Users', [])
+            if users:
+                user = users[0]
+                # Convert UserAttributes to a more usable format
+                user_info = {
+                    'username': user.get('Username'),
+                    'user_status': user.get('UserStatus'),
+                    'enabled': user.get('Enabled', True)
+                }
+                
+                # Parse attributes
+                for attr in user.get('Attributes', []):
+                    user_info[attr['Name']] = attr['Value']
+                
+                return user_info
+            
+            print(f"No user found with sub: {cognito_sub}")
+            return None
+            
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            error_message = e.response['Error']['Message']
+            
+            print(f"Failed to get user by sub: {error_code} - {error_message}")
+            raise ClientError(e.response, e.operation_name)
+    
     def refresh_tokens(self, refresh_token):
         """
         Refresh Cognito tokens using a refresh token
