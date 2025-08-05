@@ -97,6 +97,23 @@ def handler(event, context):
         
         # Find user by Cognito sub
         user = application_repository.find_user_by_sub(cognito_sub)
+        
+        # If user not found, try to find by email
+        if not user and user_info.get('email'):
+            print(f"User not found with sub: {cognito_sub}. Trying to find by email: {user_info.get('email')}")
+            from services.repositories.user_repository import UserRepository
+            user_repository = UserRepository(dynamodb_service)
+            
+            # Try to find user by email
+            existing_user = user_repository.find_user_by_email(user_info.get('email'))
+            
+            if existing_user:
+                # Update the existing user's sub
+                print(f"Found user by email: {user_info.get('email')}. Updating sub.")
+                existing_user['sub'] = cognito_sub
+                user = user_repository.update_user(existing_user)
+        
+        # If still no user, return error
         if not user:
             return error_response(
                 status_code=404,
