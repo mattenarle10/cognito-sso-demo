@@ -67,7 +67,14 @@ export interface MfaRequiredResponse {
 }
 
 // Union type for authentication results
-export type AuthResult = CognitoTokens | MfaRequiredResponse
+export type AuthResult = CognitoTokens | MfaRequiredResponse | NewPasswordRequiredResponse
+
+export interface NewPasswordRequiredResponse {
+  challengeName: 'NEW_PASSWORD_REQUIRED'
+  session: string
+  challengeParameters?: Record<string, string>
+  email: string
+}
 
 export interface ForgotPasswordParams {
   email: string
@@ -120,6 +127,18 @@ class CognitoService {
           challengeParameters: response.ChallengeParameters
         }
       }
+      
+      // Check if NEW_PASSWORD_REQUIRED challenge is required (forced password reset)
+      if (response.ChallengeName === 'NEW_PASSWORD_REQUIRED') {
+        console.log('[Cognito] NEW_PASSWORD_REQUIRED challenge received')
+        console.log('[Cognito] Challenge parameters:', response.ChallengeParameters)
+        return {
+          challengeName: 'NEW_PASSWORD_REQUIRED',
+          session: response.Session || '',
+          challengeParameters: response.ChallengeParameters,
+          email: email // Include the email so we don't need to ask the user for it again
+        }
+      }
 
       // Standard authentication result flow
       if (!response.AuthenticationResult) {
@@ -139,6 +158,75 @@ class CognitoService {
       }
     } catch (error: any) {
       console.error('cognito signin error:', error)
+      throw this.handleCognitoError(error)
+    }
+  }
+  
+  /**
+   * Responds to a NEW_PASSWORD_REQUIRED challenge when a user's password has been reset by an admin
+   * @param email User's email
+   * @param session The session string from the challenge
+   * @param newPassword The new password to set
+   * @param applicationName Optional application name for client metadata
+   * @param channelId Optional channel ID for client metadata
+   * @returns CognitoTokens if successful
+   */
+  async respondToNewPasswordRequired({ 
+    email, 
+    session, 
+    newPassword,
+    applicationName,
+    channelId 
+  }: {
+    email: string;
+    session: string;
+    newPassword: string;
+    applicationName?: string;
+    channelId?: string;
+  }): Promise<CognitoTokens> {
+    const params: RespondToAuthChallengeCommandInput = {
+      ClientId: cognitoConfig.clientId,
+      ChallengeName: 'NEW_PASSWORD_REQUIRED',
+      Session: session,
+      ChallengeResponses: {
+        USERNAME: email,
+        NEW_PASSWORD: newPassword
+      },
+      ClientMetadata: {
+        application_name: applicationName || '',
+        channel_id: channelId || ''
+      }
+    }
+    
+    try {
+      console.log('[Cognito] Responding to NEW_PASSWORD_REQUIRED challenge')
+      const command = new RespondToAuthChallengeCommand(params)
+      const response = await cognitoClient.send(command)
+      
+      console.log('[Cognito] NEW_PASSWORD_REQUIRED response:', {
+        hasAuthResult: !!response.AuthenticationResult,
+        challengeName: response.ChallengeName,
+        hasSession: !!response.Session,
+        hasTokens: !!(response.AuthenticationResult?.AccessToken)
+      })
+
+      if (!response.AuthenticationResult) {
+        throw new Error('Password change failed')
+      }
+
+      const { AccessToken, IdToken, RefreshToken } = response.AuthenticationResult
+
+      if (!AccessToken || !IdToken) {
+        throw new Error('missing tokens in response')
+      }
+
+      return {
+        access_token: AccessToken,
+        id_token: IdToken,
+        refresh_token: RefreshToken
+      }
+    } catch (error: any) {
+      console.error('[Cognito] New password challenge error:', error)
       throw this.handleCognitoError(error)
     }
   }

@@ -111,15 +111,16 @@ export const api = {
 
   async resetPassword(userId: string) {
     try {
-      // Adding confirm: true parameter required by the backend
+      // Using the force_password_reset endpoint with confirm: true parameter
       const response = await apiClient.post(`/admin/users/${userId}/password-reset`, {
         confirm: true
       })
-      toast.success('Password reset initiated successfully')
+      toast.success('Password reset initiated successfully. User will be prompted to set a new password on next login.')
       return response.data
     } catch (error: any) {
       console.error(`Error resetting password for user ${userId}:`, error)
-      toast.error(`Failed to reset password: ${error.response?.data?.message || 'Unknown error'}`)
+      const errorMsg = error.response?.data?.message || 'Unknown error';
+      toast.error(`Failed to reset password: ${errorMsg}`)
       throw error
     }
   },

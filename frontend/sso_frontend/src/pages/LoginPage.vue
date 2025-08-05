@@ -219,6 +219,24 @@ const handleLogin = async () => {
       channelId: channelId.value
     })
 
+    // Check if NEW_PASSWORD_REQUIRED challenge is required (admin forced reset)
+    if ('challengeName' in result && result.challengeName === 'NEW_PASSWORD_REQUIRED') {
+      console.log('[Login] NEW_PASSWORD_REQUIRED challenge detected - redirecting to forced password reset')
+      
+      // Redirect to forced password reset page
+      router.push({
+        name: 'force-password-reset',
+        query: {
+          email: formData.value.email,
+          session: result.session,
+          application_name: appName.value,
+          channel_id: channelId.value,
+          redirect_url: route.query.redirect_url as string
+        }
+      })
+      return
+    }
+    
     // Check if MFA verification is required
     if ('challengeName' in result && (result.challengeName === 'SMS_MFA' || result.challengeName === 'SOFTWARE_TOKEN_MFA')) {
       // Determine the destination for the code (phone or email)
