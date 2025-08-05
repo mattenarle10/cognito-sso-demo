@@ -35,8 +35,14 @@ def handler(event, context):
         # Extract user attributes from Cognito event
         user_attributes = event['request']['userAttributes']
         
+        # Check if this is a password reset event
+        trigger_source = event.get('triggerSource', '')
+        if trigger_source == 'PostConfirmation_ConfirmForgotPassword':
+            print("This is a password reset event. Skipping user creation.")
+            return event
+        
         # Get application context from ClientMetadata
-        client_metadata = event['request'].get('clientMetadata', {})
+        client_metadata = event['request'].get('clientMetadata', {}) 
         application_name = client_metadata.get('application_name', '')
         channel_id = client_metadata.get('channel_id', '')
         
@@ -44,6 +50,17 @@ def handler(event, context):
         application_id = application_name if application_name else "default_app"
         
         print(f"Registration context - Application: {application_name}, Channel: {channel_id}")
+        
+        # Check if user already exists with this email
+        email = user_attributes.get('email')
+        if email:
+            existing_user = user_repository.find_user_by_email(email)
+            if existing_user:
+                print(f"User with email {email} already exists. Updating sub.")
+                existing_user['sub'] = user_attributes.get('sub')
+                user_repository.update_user(existing_user)
+                print(f"Updated existing user {existing_user['PK']} with new sub")
+                return event
         
         # Register the user using the domain layer
         user_id, user_item = user_domain.register_user(user_attributes, application_id)
