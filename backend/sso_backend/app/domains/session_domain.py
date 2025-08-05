@@ -47,38 +47,31 @@ class SessionDomain:
         # find user by cognito sub
         user = self.application_repository.find_user_by_sub(cognito_sub)
         
-        # If user not found, create a new user using the Cognito attributes
-        if not user:
-            print(f"User not found with sub: {cognito_sub}. Creating new user from Cognito attributes.")
+        # If user not found, try to find by email
+        if not user and 'email' in user_info:
+            print(f"User not found with sub: {cognito_sub}. Trying to find by email: {user_info['email']}")
             from services.repositories.user_repository import UserRepository
             user_repository = UserRepository(self.application_repository.dynamodb_service)
             
-            # Extract attributes from JWT token
-            cognito_attributes = {
-                'sub': cognito_sub,
-                'email': user_info.get('email', ''),
-                'name': user_info.get('name', ''),
-                'phone_number': user_info.get('phone_number', ''),
-                'gender': user_info.get('gender', ''),
-                'custom:accepts_marketing': user_info.get('custom:accepts_marketing', 'false')
-            }
+            # Try to find user by email
+            user_by_email = user_repository.find_user_by_email(user_info['email'])
             
-            # Create the user
-            user_id, user = user_repository.create_user(cognito_attributes)
-            print(f"Created new user with ID: {user_id}")
-            
-            # Create application-user relationship (authorize user for the application)
-            self.application_repository.create_app_user_relationship(application_id, user_id)
-            print(f"Authorized user {user_id} for application {application_id}")
-        else:
-            user_id = user['PK']  # extract user_id
-            
-            # Check if user is authorized for this application (jambyref.md simple schema)
-            is_authorized = self.application_repository.check_app_user_authorization(application_id, user_id)
-            if not is_authorized:
-                # If not authorized, create the authorization
-                self.application_repository.create_app_user_relationship(application_id, user_id)
-                print(f"Authorized user {user_id} for application {application_id}")
+            if user_by_email:
+                # Update the existing user's sub
+                print(f"Found user by email: {user_info['email']}. Updating sub.")
+                user_by_email['sub'] = cognito_sub
+                user = user_repository.update_user(user_by_email)
+        
+        # If still no user, raise error - user must be created through registration flow
+        if not user:
+            raise ValueError("user not found in system")
+        
+        user_id = user['PK']  # extract user_id
+        
+        # Check if user is authorized for this application (jambyref.md simple schema)
+        is_authorized = self.application_repository.check_app_user_authorization(application_id, user_id)
+        if not is_authorized:
+            raise ValueError(f"user not authorized for application {application_id}")
         
         # create the session with tokens and device info
         session_id = self.session_repository.create_session(user_id, cognito_tokens, application_id, device_info)

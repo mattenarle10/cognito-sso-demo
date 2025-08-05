@@ -75,68 +75,52 @@ def handler(event, context):
         # This handles cases where a user's sub changes after password reset
         user = application_repository.find_user_by_sub(cognito_sub)
         
-        # If user not found, try to create a new user using the Cognito attributes
+        # If user not found, try to find by email
+        if not user and user_info.get('email'):
+            print(f"User not found with sub: {cognito_sub}. Trying to find by email: {user_info.get('email')}")
+            
+            # Check if user exists by email
+            existing_user = user_repository.find_user_by_email(user_info.get('email'))
+            
+            if existing_user:
+                # Update the existing user's sub
+                print(f"Found user by email: {user_info.get('email')}. Updating sub.")
+                existing_user['sub'] = cognito_sub
+                user = user_repository.update_user(existing_user)
+        
+        # If still no user, return error
         if not user:
-            print(f"User not found with sub: {cognito_sub}. Creating new user from token.")
-            
-            # Extract attributes from JWT token
-            cognito_attributes = {
-                'sub': cognito_sub,
-                'email': user_info.get('email', ''),
-                'name': user_info.get('name', ''),
-                'phone_number': user_info.get('phone_number', ''),
-                'gender': user_info.get('gender', ''),
-                'custom:accepts_marketing': user_info.get('custom:accepts_marketing', 'false')
-            }
-            
-            # Create the user if email exists
-            if cognito_attributes['email']:
-                # First check if user exists by email
-                existing_user = user_repository.find_user_by_email(cognito_attributes['email'])
-                
-                if existing_user:
-                    # Update the existing user's sub
-                    print(f"Found user by email: {cognito_attributes['email']}")
-                    existing_user['sub'] = cognito_sub
-                    user = user_repository.update_user(existing_user)
-                else:
-                    # Create a new user
-                    user_id, user = user_repository.create_user(cognito_attributes)
-                    print(f"Created new user with ID: {user_id}")
-            
-            # If still no user, return error
-            if not user:
-                return error_response(
-                    status_code=404,
-                    message="User not found in system and could not be created",
-                    error_code="USER_NOT_FOUND"
-                )
+            return error_response(
+                status_code=404,
+                message="User not found in system",
+                error_code="USER_NOT_FOUND"
+            )
         
         user_id = user['PK']  # Extract user_id from the user record
         
-        # Check if user is authorized for the application
+        # Check if user is authorized for this application
         is_authorized = application_repository.check_app_user_authorization(application_id, user_id)
         
-        # If not authorized, create the authorization
-        if not is_authorized:
-            print(f"User {user_id} not authorized for application {application_id}. Creating authorization.")
-            application_repository.create_app_user_relationship(application_id, user_id)
-            is_authorized = True
-            print(f"Authorized user {user_id} for application {application_id}")
-        
-        return success_response(
-            data={
-                "authorized": True,
-                "user_id": user_id,
-                "application_id": application_id,
-                "user_info": {
-                    "sub": cognito_sub,
-                    "email": user_info.get('email'),
-                    "name": user_info.get('name')
-                }
-            },
-            message="User is authorized for the application"
-        )
+        if is_authorized:
+            return success_response(
+                data={
+                    "authorized": True,
+                    "user_id": user_id,
+                    "application_id": application_id,
+                    "user_info": {
+                        "sub": cognito_sub,
+                        "email": user_info.get('email'),
+                        "name": user_info.get('name')
+                    }
+                },
+                message="User is authorized for the application"
+            )
+        else:
+            return error_response(
+                status_code=403,
+                message="User is not authorized for this application",
+                error_code="USER_NOT_AUTHORIZED"
+            )
         
     except Exception as e:
         print(f"Error in check app user handler: {str(e)}")
