@@ -30,7 +30,7 @@ var/
 node_modules/
 
 # Environment variables
-.env.*
+.env
 .env.dev.yml
 
 
