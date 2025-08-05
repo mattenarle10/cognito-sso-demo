@@ -111,12 +111,18 @@ class SessionRepository:
         args:
             session_id (str): the session id
         """
-        key = {
-            "PK": session_id,
-            "SK": "session"
-        }
-        
-        self.dynamodb_service.dynamodb.Table(self.table_name).delete_item(Key=key)
+        try:
+            key = {
+                "PK": session_id,
+                "SK": "session"
+            }
+            
+            # Use the main_table_name from dynamodb_service instead of self.table_name
+            self.dynamodb_service.dynamodb.Table(self.dynamodb_service.main_table_name).delete_item(Key=key)
+            return True
+        except Exception as e:
+            print(f"Error deleting session {session_id}: {str(e)}")
+            return False
         
     def update_session_tokens(self, session_id, tokens, expires_at=None):
         """
