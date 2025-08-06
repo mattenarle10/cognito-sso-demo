@@ -190,11 +190,8 @@ const isAdminReset = computed(() => route.query.admin_reset === 'true')
 onMounted(() => {
   email.value = route.query.email as string || ''
   
-  // Check if this is an admin-initiated reset
-  if (isAdminReset.value) {
-    // For admin resets, show a helpful message
-    toast.info('Enter the verification code from the email sent when your password was reset')
-  }
+  // We don't need to show a toast here since we already show one in LoginPage.vue
+  // The visual indicator in the UI is sufficient
   
   // Focus first input field
   nextTick(() => {
