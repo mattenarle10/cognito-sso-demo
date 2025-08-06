@@ -221,17 +221,21 @@ const handleLogin = async () => {
 
     // Check if NEW_PASSWORD_REQUIRED challenge is required (admin forced reset)
     if ('challengeName' in result && result.challengeName === 'NEW_PASSWORD_REQUIRED') {
-      console.log('[Login] NEW_PASSWORD_REQUIRED challenge detected - redirecting to forced password reset')
+      console.log('[Login] NEW_PASSWORD_REQUIRED challenge detected - redirecting directly to reset password page')
       
-      // Redirect to forced password reset page
+      // For admin-initiated resets, we'll skip the ForcePasswordResetPage entirely
+      // and redirect directly to ResetPasswordPage
+      toast.info('Your password has been reset by an administrator. Please check your email for the verification code.')
+      
+      // Redirect directly to reset password page
       router.push({
-        name: 'force-password-reset',
+        name: 'reset-password',
         query: {
           email: formData.value.email,
-          session: result.session,
           application_name: appName.value,
           channel_id: channelId.value,
-          redirect_url: route.query.redirect_url as string
+          redirect_url: route.query.redirect_url as string,
+          admin_reset: 'true'
         }
       })
       return

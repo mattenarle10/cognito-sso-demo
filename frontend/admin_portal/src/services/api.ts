@@ -115,7 +115,7 @@ export const api = {
       const response = await apiClient.post(`/admin/users/${userId}/password-reset`, {
         confirm: true
       })
-      toast.success('Password reset initiated successfully. User will receive an email with a verification code to set a new password.')
+      toast.success('Password reset initiated successfully. User will receive an email with a verification code and will be directed straight to the reset password page on their next login.')
       return response.data
     } catch (error: any) {
       console.error(`Error resetting password for user ${userId}:`, error)

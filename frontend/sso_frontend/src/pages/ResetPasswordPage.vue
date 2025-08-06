@@ -8,6 +8,9 @@
           <span class="bg-gradient-to-r from-gray-200 via-gray-100 to-gray-300 bg-clip-text text-transparent relative inline-block">Reset Password</span>
         </h1>
         <p class="text-zinc-500 text-sm font-light tracking-wide" v-if="appName">to continue to {{ appName }}</p>
+        <p v-if="isAdminReset" class="text-zinc-400 text-sm mt-2 bg-zinc-800/50 py-2 px-3 rounded-lg inline-block">
+          <span class="text-zinc-300">Admin reset:</span> Enter the verification code from your email
+        </p>
         <p class="text-zinc-400 text-sm mt-3 bg-zinc-800/50 py-2 px-3 rounded-lg inline-block">
           <span class="text-zinc-300">Code sent to:</span> {{ email }}
         </p>
@@ -180,13 +183,15 @@ const error = ref('')
 const success = ref('')
 const errors = ref<Record<string, string>>({})
 
+// Computed property to check if this is an admin-initiated reset
+const isAdminReset = computed(() => route.query.admin_reset === 'true')
+
 // On component mount, get query params from URL and set up form
 onMounted(() => {
   email.value = route.query.email as string || ''
   
   // Check if this is an admin-initiated reset
-  const isAdminReset = route.query.admin_reset === 'true'
-  if (isAdminReset) {
+  if (isAdminReset.value) {
     // For admin resets, show a helpful message
     toast.info('Enter the verification code from the email sent when your password was reset')
   }
