@@ -229,8 +229,7 @@ function confirmEnableUser(user: User) {
 function confirmResetPassword(user: User) {
   selectedUser.value = user;
   confirmationTitle.value = 'Reset Password';
-  const email = user.attributes?.email || user.username;
-  confirmationMessage.value = `Are you sure you want to reset the password for ${email}?`;
+  confirmationMessage.value = `Are you sure you want to reset the password for ${user.username}? The user will receive an email with a verification code to set a new password.`;
   confirmationButtonText.value = 'Reset Password';
   confirmationAction.value = resetPassword;
   confirmationModalOpen.value = true;

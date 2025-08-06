@@ -8,7 +8,7 @@
           <span class="bg-gradient-to-r from-gray-200 via-gray-100 to-gray-300 bg-clip-text text-transparent relative inline-block">Password Reset</span>
         </h1>
         <p class="text-zinc-500 font-light tracking-wide">
-          An administrator has reset your password. Please create a new password to continue.
+          An administrator has reset your password. Please check your email for a verification code and set a new password to continue.
         </p>
       </div>
 
@@ -225,24 +225,22 @@ const handleSubmit = async () => {
       })
       // No tokens returned from confirmForgotPassword, user will need to log in again
     } else {
-      // No session or code - initiate forgot password flow
-      console.log('[ForcePasswordReset] No session or code available, initiating forgot password flow')
-      await cognitoService.forgotPassword({
-        email: email.value,
-        applicationName: applicationName.value,
-        channelId: channelId.value
-      })
+      // No session or code - this is likely an admin-initiated reset
+      console.log('[ForcePasswordReset] No session or code available, handling admin reset flow')
       
-      toast.info('A verification code has been sent to your email. Please check your inbox and enter the code to reset your password.')
+      // For admin resets, we don't need to initiate another forgot password flow
+      // The user already has a verification code in their email from the admin reset
+      toast.info('Please check your email for the verification code sent when your password was reset.')
       
-      // Redirect to the regular reset password page
+      // Redirect directly to reset password page without initiating another forgot password flow
       router.push({
         name: 'reset-password',
         query: {
           email: email.value,
           application_name: applicationName.value,
           channel_id: channelId.value,
-          redirect_url: redirectUrl.value
+          redirect_url: redirectUrl.value,
+          admin_reset: 'true'
         }
       })
       return

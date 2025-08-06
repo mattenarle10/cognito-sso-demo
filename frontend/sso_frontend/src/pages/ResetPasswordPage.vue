@@ -184,6 +184,13 @@ const errors = ref<Record<string, string>>({})
 onMounted(() => {
   email.value = route.query.email as string || ''
   
+  // Check if this is an admin-initiated reset
+  const isAdminReset = route.query.admin_reset === 'true'
+  if (isAdminReset) {
+    // For admin resets, show a helpful message
+    toast.info('Enter the verification code from the email sent when your password was reset')
+  }
+  
   // Focus first input field
   nextTick(() => {
     const firstInput = document.getElementById('reset-code-0') as HTMLInputElement
