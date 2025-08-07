@@ -24,7 +24,6 @@ export class AuthService {
       // This forces Google account selection by clearing all sessions
       try {
         await signOut();
-        console.log('Cleared Amplify sessions');
         
         // Also clear browser storage to force fresh Google OAuth
         localStorage.clear();
@@ -39,9 +38,8 @@ export class AuthService {
           document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
         });
         
-        console.log('Cleared all browser storage and cookies for fresh OAuth');
       } catch (e) {
-        console.log('No existing session to clear');
+        // No existing session to clear
       }
       
       // Get OAuth parameters from sessionStorage to include in state
@@ -62,11 +60,9 @@ export class AuthService {
       });
     } catch (err: any) {
       if (err.name === 'UserAlreadyAuthenticatedException') {
-        console.log('User already authenticated - handling SSO flow');
         // This is expected in SSO flow - redirect to appropriate page
         return;
       }
-      console.error('Error signing in with Google:', err);
       throw err;
     }
   }
@@ -85,7 +81,6 @@ export class AuthService {
       return await getCurrentUser();
     } catch (err: any) {
       // Not authenticated - this is expected behavior
-      console.log('No authenticated user found');
       return null;
     }
   }
@@ -100,7 +95,6 @@ export class AuthService {
       
       // Check if tokens exist in the session
       if (!session.tokens) {
-        console.log('Session tokens not yet available');
         return null;
       }
       
@@ -116,7 +110,6 @@ export class AuthService {
       }
       
       if (!idToken || !accessToken) {
-        console.log('Required tokens (idToken, accessToken) not yet available');
         return null;
       }
       
@@ -129,7 +122,6 @@ export class AuthService {
         refreshToken
       };
     } catch (err: any) {
-      console.log('Session not ready yet');
       return null;
     }
   }
@@ -154,7 +146,6 @@ export class AuthService {
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
     
-    console.error('Failed to retrieve OAuth tokens after maximum attempts');
     return null;
   }
 
@@ -168,7 +159,6 @@ export class AuthService {
       });
       return true;
     } catch (err: any) {
-      console.error('Error updating user attributes:', err);
       return false;
     }
   }
@@ -180,7 +170,6 @@ export class AuthService {
     try {
       await signOut();
     } catch (err: any) {
-      console.error('Error signing out:', err);
       throw err;
     }
   }
@@ -201,7 +190,6 @@ export class AuthService {
       // Check if phone_number is missing or has placeholder value
       return !attributes['phone_number'] || attributes['phone_number'] === '+00000000000';
     } catch (error: any) {
-      console.error('Error checking profile completion status:', error);
       return false;
     }
   }
@@ -283,21 +271,39 @@ export class AuthService {
       }
       
       // Step 6: Initialize session with SSO backend
-      const sessionResponse = await api.initSession(backendTokens, applicationName);
-      if (!sessionResponse) {
-        throw new Error('Failed to initialize session with SSO backend');
+      try {
+        const sessionResponse = await api.initSession(backendTokens, applicationName);
+        if (!sessionResponse) {
+          throw new Error('Failed to initialize session with SSO backend');
+        }
+
+        // Step 7: User is fully authenticated and authorized
+        return {
+          success: true,
+          needsProfileCompletion: false,
+          sessionId: sessionResponse.session_id,
+          redirectUrl
+        };
+      } catch (error: any) {
+        // Check if the error is due to user not being authorized for the application
+        if (error?.response?.data?.error_code === 'SESSION_INIT_FAILED' || 
+            error?.response?.status === 401 ||
+            (error?.response?.data?.message && error?.response?.data?.message.includes('user not authorized'))) {
+          
+          // Return consent required status with tokens
+          return {
+            status: 'consent_required',
+            tokens: backendTokens,
+            applicationName,
+            redirectUrl
+          };
+        }
+        
+        // Re-throw other errors
+        throw error;
       }
 
-      // Step 7: User is fully authenticated and authorized
-      return {
-        success: true,
-        needsProfileCompletion: false,
-        sessionId: sessionResponse.session_id,
-        redirectUrl
-      };
-
     } catch (error: any) {
-      console.error('Google OAuth process failed:', error);
       throw error;
     }
   }

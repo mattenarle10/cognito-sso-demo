@@ -16,7 +16,7 @@
           </h1>
 
           <p class="text-zinc-400 text-sm">
-            allow <strong class="text-zinc-300">The Grind</strong> to access your grind account
+                          allow <strong class="text-zinc-300">{{ applicationName || 'The Grind' }}</strong> to access your grind account
           </p>
         </div>
 

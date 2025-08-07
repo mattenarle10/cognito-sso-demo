@@ -41,10 +41,10 @@
     <ConsentScreen 
       v-if="showConsentScreen"
       :application-id="appName"
-      :application-name="appName"
-      :id-token="userTokens?.id_token"
-      @approved="handleConsentApproved"
-      @denied="handleConsentDenied"
+        :application-name="appName"
+        :id-token="userTokens?.id_token"
+        @approved="handleConsentApproved"
+        @denied="handleConsentDenied"
       @error="handleConsentError"
     />
   </AuthBackground>
@@ -85,11 +85,7 @@ const userTokens = ref<any>(null)
 const isAdminUser = ref(false)
 
 // Helper function for debug logging
-function logDebug(message: string, data?: any) {
-  if (isDebug) {
-    console.log(`[OAUTH:DEBUG] ${message}`, data || '')
-  }
-}
+function logDebug(message: string, data?: any) {}
 
 // Function to handle successful authentication 
 const handleSuccessfulAuth = async () => {
@@ -104,7 +100,6 @@ const handleSuccessfulAuth = async () => {
       
       // If admin, redirect to admin portal instead of continuing the flow
       if (isAdminUser.value) {
-        console.log('Admin user detected, redirecting to admin portal')
         toast.success('Welcome, Admin! Redirecting to admin portal...')
         // Short delay to allow toast to be seen
         setTimeout(() => {
@@ -191,19 +186,11 @@ const handleSuccessfulAuth = async () => {
     sessionStorage.removeItem('oauth_redirect_url')
     
     try {
-      console.log('[OAUTH:Flow] Starting Google OAuth process with params:', { 
-        appName: localAppName, 
-        channelId: localChannelId,
-        hasRedirectUrl: !!localRedirectUrl
-      })
-      
       const result = await authService.processGoogleOAuth(localAppName, localChannelId, localRedirectUrl)
-      console.log('[OAUTH:Flow] OAuth process completed with result type:', result ? Object.keys(result) : 'null')
       
       // Check if consent is required (only returned when profile is complete but user not authorized)
       if ('status' in result && result.status === 'consent_required') {
         // User needs to authorize the application first
-        console.log('[OAUTH:Flow] User consent required - showing consent screen')
         showConsentScreen.value = true
         userTokens.value = result.tokens
         // Store redirect URL for later use
@@ -216,7 +203,6 @@ const handleSuccessfulAuth = async () => {
       // Check if profile completion is needed (this is checked first in the new flow)
       if (result.needsProfileCompletion) {
         // User needs to complete their profile
-        console.log('[OAUTH:Flow] User needs to complete profile - redirecting to profile completion')
         
         // Store tokens and session info for profile completion
         localStorage.setItem('temp_session_id', result.sessionId)
@@ -233,20 +219,57 @@ const handleSuccessfulAuth = async () => {
         })
       } else {
         // User is fully authenticated, redirect to client app
-        console.log('User fully authenticated, redirecting to client app')
         
-        if (localRedirectUrl) {
-          const finalUrl = `${localRedirectUrl}?session_id=${result.sessionId}`
-          console.log('Redirecting to:', finalUrl)
-          window.location.href = finalUrl
-        } else {
-          // Fallback: redirect to dashboard or home
-          await router.push({ name: 'Dashboard' })
-        }
+                  if (localRedirectUrl) {
+           const finalUrl = `${localRedirectUrl}?session_id=${result.sessionId}`
+           window.location.href = finalUrl
+         } else {
+           // Use default redirect URL from environment variables
+           const defaultRedirectUrl = import.meta.env.VITE_DEFAULT_REDIRECT_URL || 'http://localhost:8080'
+           const finalUrl = `${defaultRedirectUrl}?session_id=${result.sessionId}`
+           window.location.href = finalUrl
+         }
       }
     } catch (err: any) {
       console.error('[OAUTH:Error]', err)
-      // Provide more detailed error information
+      
+      // Check if the error is related to authorization
+      const errorData = err?.response?.data
+      console.log('[OAUTH:Debug] Error details:', { 
+        errorCode: errorData?.error_code,
+        message: err?.message,
+        hasResponseData: !!errorData,
+        hasTokens: !!err?.tokens,
+        status: err?.status
+      })
+      
+      // Look for any indication that this is an authorization error
+      if (errorData?.error_code === 'SESSION_INIT_FAILED' || 
+          (err?.message && err?.message.toLowerCase().includes('user not authorized')) ||
+          err?.status === 'consent_required' ||
+          err?.response?.status === 401) {
+        
+        // Get tokens from the error object if available
+        if (err.tokens) {
+          userTokens.value = err.tokens
+        }
+        
+        // Store redirect URL for later use
+        if (localRedirectUrl) {
+          localStorage.setItem('temp_redirect_url', localRedirectUrl)
+        }
+        
+        // Set application name for consent screen
+        appName.value = err.applicationName || 'thegrind'
+        
+        // Show consent screen
+        showConsentScreen.value = true
+        
+        loading.value = false
+        return
+      }
+      
+      // Provide more detailed error information for other errors
       if (err.name === 'UserNotFoundError' || err.message?.includes('USER_NOT_FOUND')) {
         console.error('[OAUTH:Error] User not found in DynamoDB - this is likely due to OAuth user not being created')
         error.value = 'Your Google account was authenticated but not registered in our system. Please try again or contact support.'
@@ -278,7 +301,6 @@ const handleSuccessfulAuth = async () => {
 
 // Consent Screen Handlers
 const handleConsentApproved = async () => {
-  console.log('User approved consent, continuing OAuth flow...')
   showConsentScreen.value = false
   loading.value = true
   
@@ -289,11 +311,8 @@ const handleConsentApproved = async () => {
       throw new Error('Failed to initialize session with SSO backend')
     }
 
-    console.log('Session initialized:', sessionResponse.session_id)
-
     // For Google OAuth users, always go to CompleteProfile page
     // since they need to complete their phone number and other details
-    console.log('Redirecting to CompleteProfile page')
     
     // Store session info for CompleteProfile page
     localStorage.setItem('temp_session_id', sessionResponse.session_id)
@@ -320,7 +339,6 @@ const handleConsentApproved = async () => {
 }
 
 const handleConsentDenied = () => {
-  console.log('User denied consent')
   showConsentScreen.value = false
   toast.error('Authorization was denied')
   goToLogin()
@@ -348,12 +366,9 @@ onMounted(() => {
     const { event } = payload
     
     if (event === 'signedIn') {
-      console.log('User signed in')
       handleSuccessfulAuth()
     } else if (event === 'signedOut') {
-      console.log('User signed out')
     } else if (event === 'customOAuthState') {
-      console.log('Custom OAuth state received:', payload.data)
       // Store custom state in sessionStorage for later retrieval
       if (payload.data) {
         sessionStorage.setItem('oauth_custom_state', payload.data)
@@ -376,11 +391,9 @@ onMounted(() => {
   authService.getCurrentUser()
     .then(user => {
       if (user) {
-        console.log('User is already authenticated')
         handleSuccessfulAuth()
       } else {
         // This will be handled by the Hub listener when Amplify completes the OAuth flow
-        console.log('Waiting for authentication to complete...')
       }
     })
     .catch((err: any) => {
