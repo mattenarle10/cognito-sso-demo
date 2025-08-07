@@ -120,14 +120,10 @@ const handleSuccessfulAuth = async () => {
     let localChannelId = ''
     let localRedirectUrl = ''
     
-    // First, try to get from OAuth custom state (new method)
+          // First, try to get from OAuth custom state (new method)
     try {
       // Listen for custom OAuth state from Amplify Hub
       const customStateStr = route.query.state as string
-      if (customStateStr) {
-        // OAuth state might contain our custom data
-        console.log('OAuth state received:', customStateStr)
-      }
       
       // Check if we have custom state in sessionStorage (set by Hub listener)
       if (customStateStr) {
@@ -135,10 +131,10 @@ const handleSuccessfulAuth = async () => {
         localAppName = parsed.application_name || ''
         localChannelId = parsed.channel_id || ''
         localRedirectUrl = parsed.redirect_url || ''
-        console.log('Retrieved from custom state:', { appName: localAppName, channelId: localChannelId, redirectUrl: localRedirectUrl })
+        logDebug('Retrieved from custom state', { appName: localAppName, channelId: localChannelId, redirectUrl: localRedirectUrl })
       }
     } catch (e) {
-      console.log('Failed to parse custom state:', e)
+      logDebug('Failed to parse custom state', e)
     }
     
     // Second fallback: check route query parameters
@@ -157,20 +153,20 @@ const handleSuccessfulAuth = async () => {
     
     // Last resort: check if we're on a page with URL parameters (like LoginPage)
     if (!localAppName || !localChannelId) {
-      console.log('Trying to get parameters from current URL...')
+      logDebug('Trying to get parameters from current URL')
       const urlParams = new URLSearchParams(window.location.search)
       localAppName = urlParams.get('application_name') || ''
       localChannelId = urlParams.get('channel_id') || ''
       localRedirectUrl = urlParams.get('redirect_url') || ''
-      console.log('URL parameters found:', { appName: localAppName, channelId: localChannelId, redirectUrl: localRedirectUrl })
+      logDebug('URL parameters found', { appName: localAppName, channelId: localChannelId, redirectUrl: localRedirectUrl })
     }
     
     // Final fallback: use environment defaults
     if (!localAppName || !localChannelId) {
-      console.log('Using environment variable defaults...')
+      logDebug('Using environment variable defaults')
       localAppName = localAppName || import.meta.env.VITE_DEFAULT_APPLICATION_NAME || ''
       localChannelId = localChannelId || import.meta.env.VITE_DEFAULT_CHANNEL_ID || ''
-      console.log('Environment defaults:', { appName: localAppName, channelId: localChannelId })
+      logDebug('Environment defaults', { appName: localAppName, channelId: localChannelId })
     }
     
     // Update refs for ConsentScreen
@@ -178,24 +174,21 @@ const handleSuccessfulAuth = async () => {
     channelId.value = localChannelId
     
     if (!appName.value || !channelId.value) {
-      console.error('All parameter retrieval methods failed:')
-      console.error('Route query:', route.query)
-      console.error('SessionStorage:', {
-        appName: sessionStorage.getItem('oauth_application_name'),
-        channelId: sessionStorage.getItem('oauth_channel_id'),
-        customState: sessionStorage.getItem('oauth_custom_state')
+      logDebug('All parameter retrieval methods failed', {
+        routeQuery: route.query,
+        sessionStorage: {
+          appName: sessionStorage.getItem('oauth_application_name'),
+          channelId: sessionStorage.getItem('oauth_channel_id'),
+          customState: sessionStorage.getItem('oauth_custom_state')
+        }
       })
       throw new Error('Missing application or channel information. Please restart the login process.')
     }
-
-    console.log('Processing Google OAuth for:', { appName: localAppName, channelId: localChannelId, redirectUrl: localRedirectUrl })
 
     // Clean up sessionStorage since we have the parameters
     sessionStorage.removeItem('oauth_application_name')
     sessionStorage.removeItem('oauth_channel_id')
     sessionStorage.removeItem('oauth_redirect_url')
-
-    console.log('Processing Google OAuth for:', { appName: localAppName, channelId: localChannelId, redirectUrl: localRedirectUrl })
     
     try {
       console.log('[OAUTH:Flow] Starting Google OAuth process with params:', { 

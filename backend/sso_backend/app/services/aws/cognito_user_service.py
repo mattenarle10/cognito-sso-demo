@@ -110,10 +110,16 @@ class CognitoUserService:
                     try:
                         # For Google OAuth users, we need to use the email as username
                         # Try different username formats for different identity providers
+                        email = None
+                        
+                        # Try to get email from user_info if available
+                        if 'user_info' in locals() and user_info and 'email' in user_info:
+                            email = user_info.get('email')
+                            
                         possible_usernames = [
                             username_for_admin,  # Standard format
                             f"Google_{user_sub}",  # Google format
-                            user_info.get('email') if user_info and 'email' in user_info else None  # Email as fallback
+                            email  # Email as fallback
                         ]
                         
                         # Filter out None values

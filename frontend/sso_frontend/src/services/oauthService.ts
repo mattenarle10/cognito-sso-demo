@@ -120,7 +120,7 @@ export class AuthService {
         return null;
       }
       
-      console.log('Session tokens retrieved successfully');
+      // Tokens retrieved successfully
       
       // Return tokens in the format expected by our AuthTokens interface
       return {
@@ -144,13 +144,13 @@ export class AuthService {
     while (attempts < maxAttempts) {
       const tokens = await this.getCurrentSession();
       if (tokens) {
-        console.log('OAuth tokens retrieved after', attempts + 1, 'attempts');
+        // OAuth tokens retrieved successfully
         return tokens;
       }
       
       attempts++;
       const waitTime = Math.min(500 * Math.pow(2, attempts), 5000); // Exponential backoff, max 5s
-      console.log(`Waiting for OAuth tokens... attempt ${attempts}/${maxAttempts}`);
+      // Waiting for OAuth tokens with exponential backoff
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
     
@@ -217,14 +217,12 @@ export class AuthService {
 
     try {
       // Step 1: Validate application and channel using existing API
-      console.log('Validating application and channel...');
       const appValidation = await api.validateAppChannel(applicationName, channelId);
       if (!appValidation?.valid) {
         throw new Error('Invalid application or channel');
       }
 
       // Step 2: Wait for OAuth tokens with proper timing
-      console.log('Waiting for OAuth tokens...');
       const tokens = await this.waitForOAuthTokens();
       if (!tokens) {
         throw new Error('Failed to retrieve OAuth tokens - please try signing in again');
@@ -242,13 +240,7 @@ export class AuthService {
         expires_in: rawSession.tokens?.accessToken?.payload?.exp || 3600
       };
       
-      console.log('Raw session tokens:', {
-        hasIdToken: !!backendTokens.id_token,
-        hasAccessToken: !!backendTokens.access_token,
-        hasRefreshToken: !!backendTokens.refresh_token,
-        idTokenLength: backendTokens.id_token?.length,
-        accessTokenLength: backendTokens.access_token?.length
-      });
+      // Tokens extracted for backend validation
       
       // Validate we have the required tokens
       if (!backendTokens.id_token || !backendTokens.access_token) {
@@ -256,15 +248,13 @@ export class AuthService {
       }
 
       // Step 4: Check if profile completion is needed FIRST
-      console.log('Checking if profile completion is needed...');
       const needsProfileCompletion = await this.checkNeedsProfileCompletion();
       
       if (needsProfileCompletion) {
-        console.log('User needs to complete profile - skipping authorization check for now');
+        // User needs to complete profile - skip authorization check for now
         const attributes = await fetchUserAttributes();
         
         // Initialize a temporary session for profile completion
-        console.log('Initializing temporary session for profile completion...');
         const sessionResponse = await api.initSession(backendTokens, applicationName);
         if (!sessionResponse) {
           throw new Error('Failed to initialize session with SSO backend');
@@ -280,10 +270,9 @@ export class AuthService {
       }
 
       // Step 5: Profile is complete, now check authorization
-      console.log('Profile complete, checking user authorization...');
       const userAuth = await api.checkAppUser(backendTokens.id_token, applicationName);
       if (!userAuth) {
-        console.log('User not yet authorized for this application - consent needed');
+        // User not yet authorized for this application - consent needed
         // Return special status indicating consent is needed
         return {
           status: 'consent_required',
@@ -294,16 +283,12 @@ export class AuthService {
       }
       
       // Step 6: Initialize session with SSO backend
-      console.log('Initializing session with SSO backend...');
       const sessionResponse = await api.initSession(backendTokens, applicationName);
       if (!sessionResponse) {
         throw new Error('Failed to initialize session with SSO backend');
       }
 
-      console.log('Session initialized:', sessionResponse.session_id);
-
       // Step 7: User is fully authenticated and authorized
-      console.log('User fully authenticated');
       return {
         success: true,
         needsProfileCompletion: false,
