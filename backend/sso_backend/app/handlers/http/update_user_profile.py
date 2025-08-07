@@ -63,7 +63,23 @@ def handler(event, context):
         
         # Find user in DynamoDB (CRITICAL for authorization system)
         user = application_repository.find_user_by_sub(cognito_sub)
+        
+        # Debug: Print user lookup details
+        print(f"Looking for user with sub: {cognito_sub}")
+        
+        # If not found by sub directly, try to find by email (for OAuth users)
+        if not user and 'email' in user_info:
+            print(f"User not found by sub, trying email lookup: {user_info['email']}")
+            user = user_repository.find_user_by_email(user_info['email'])
+            
+            if user:
+                print(f"Found user by email: {user_info['email']}")
+                # Update the user's sub to match the current one
+                user['sub'] = cognito_sub
+                user_repository.update_user(user)
+        
         if not user:
+            print(f"User not found in DynamoDB with sub: {cognito_sub} or email: {user_info.get('email', 'N/A')}")
             return error_response(
                 status_code=404,
                 message="User not found in system",
@@ -71,6 +87,7 @@ def handler(event, context):
             )
         
         user_id = user['PK']  # Extract user_id from DynamoDB
+        print(f"Found user with ID: {user_id}")
         
         # Extract request body
         body = event.get('body')

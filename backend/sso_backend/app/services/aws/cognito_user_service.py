@@ -84,12 +84,14 @@ class CognitoUserService:
             
             # Try direct update with access token
             try:
+                print(f"Attempting to update attributes: {user_attributes}")
                 response = self.cognito_client.update_user_attributes(
                     AccessToken=access_token,
                     UserAttributes=user_attributes
                 )
                 
                 print(f"Successfully updated user attributes: {list(attributes.keys())}")
+                print(f"Response from Cognito: {response}")
                 return True
                 
             except ClientError as token_err:
@@ -106,14 +108,42 @@ class CognitoUserService:
                     print(f"Attempting admin update as fallback for user {username_for_admin}")
                     
                     try:
-                        # Use admin API as fallback (requires appropriate IAM permissions)
-                        admin_response = self.cognito_client.admin_update_user_attributes(
-                            UserPoolId=self.user_pool_id,
-                            Username=username_for_admin,
-                            UserAttributes=user_attributes
-                        )
+                        # For Google OAuth users, we need to use the email as username
+                        # Try different username formats for different identity providers
+                        possible_usernames = [
+                            username_for_admin,  # Standard format
+                            f"Google_{user_sub}",  # Google format
+                            user_info.get('email') if user_info and 'email' in user_info else None  # Email as fallback
+                        ]
                         
-                        print(f"Successfully updated user attributes via admin API: {list(attributes.keys())}")
+                        # Filter out None values
+                        possible_usernames = [u for u in possible_usernames if u]
+                        
+                        # Try each username format
+                        admin_response = None
+                        last_error = None
+                        
+                        for username in possible_usernames:
+                            try:
+                                print(f"Attempting admin update with username: {username}")
+                                admin_response = self.cognito_client.admin_update_user_attributes(
+                                    UserPoolId=self.user_pool_id,
+                                    Username=username,
+                                    UserAttributes=user_attributes
+                                )
+                                print(f"Successfully updated user attributes via admin API: {list(attributes.keys())}")
+                                print(f"Admin response: {admin_response}")
+                                break  # Success, exit the loop
+                            except ClientError as username_err:
+                                last_error = username_err
+                                print(f"Failed with username {username}: {username_err.response['Error']['Code']} - {username_err.response['Error']['Message']}")
+                        
+                        # If we tried all usernames and still failed, raise the last error
+                        if not admin_response:
+                            if last_error:
+                                raise last_error
+                            else:
+                                raise ValueError("Failed to update attributes with all username formats")
                         return True
                         
                     except ClientError as admin_err:

@@ -72,6 +72,10 @@ const { checkIsAdmin, redirectToAdminPortalIfAdmin } = useAdminCheck()
 // Admin portal URL - should match the deployed admin portal URL
 const ADMIN_PORTAL_URL = import.meta.env.VITE_ADMIN_PORTAL_URL || 'http://localhost:5174'
 
+// Enable debug mode for detailed logging
+const isDebug = import.meta.env.VITE_OAUTH_DEBUG === 'true' || import.meta.env.DEV
+
+// Component state
 const loading = ref(true)
 const error = ref('')
 const appName = ref('')
@@ -80,7 +84,14 @@ const showConsentScreen = ref(false)
 const userTokens = ref<any>(null)
 const isAdminUser = ref(false)
 
-// Function to handle successful authentication
+// Helper function for debug logging
+function logDebug(message: string, data?: any) {
+  if (isDebug) {
+    console.log(`[OAUTH:DEBUG] ${message}`, data || '')
+  }
+}
+
+// Function to handle successful authentication 
 const handleSuccessfulAuth = async () => {
   try {
     // First, check if user is an admin and store the result
@@ -187,12 +198,19 @@ const handleSuccessfulAuth = async () => {
     console.log('Processing Google OAuth for:', { appName: localAppName, channelId: localChannelId, redirectUrl: localRedirectUrl })
     
     try {
+      console.log('[OAUTH:Flow] Starting Google OAuth process with params:', { 
+        appName: localAppName, 
+        channelId: localChannelId,
+        hasRedirectUrl: !!localRedirectUrl
+      })
+      
       const result = await authService.processGoogleOAuth(localAppName, localChannelId, localRedirectUrl)
+      console.log('[OAUTH:Flow] OAuth process completed with result type:', result ? Object.keys(result) : 'null')
       
       // Check if consent is required (only returned when profile is complete but user not authorized)
       if ('status' in result && result.status === 'consent_required') {
         // User needs to authorize the application first
-        console.log('User consent required - showing consent screen')
+        console.log('[OAUTH:Flow] User consent required - showing consent screen')
         showConsentScreen.value = true
         userTokens.value = result.tokens
         // Store redirect URL for later use
@@ -205,7 +223,7 @@ const handleSuccessfulAuth = async () => {
       // Check if profile completion is needed (this is checked first in the new flow)
       if (result.needsProfileCompletion) {
         // User needs to complete their profile
-        console.log('Redirecting to profile completion')
+        console.log('[OAUTH:Flow] User needs to complete profile - redirecting to profile completion')
         
         // Store tokens and session info for profile completion
         localStorage.setItem('temp_session_id', result.sessionId)
@@ -216,7 +234,8 @@ const handleSuccessfulAuth = async () => {
           name: 'CompleteProfile',
           query: {
             session_id: result.sessionId,
-            redirect_url: localRedirectUrl || ''
+            redirect_url: localRedirectUrl || '',
+            provider: 'google' // Add provider info for profile completion page
           }
         })
       } else {
@@ -232,9 +251,27 @@ const handleSuccessfulAuth = async () => {
           await router.push({ name: 'Dashboard' })
         }
       }
-    } catch (error: any) {
-      console.error('Google OAuth process failed:', error)
-      error.value = error.message || 'Google OAuth authentication failed'
+    } catch (err: any) {
+      console.error('[OAUTH:Error]', err)
+      // Provide more detailed error information
+      if (err.name === 'UserNotFoundError' || err.message?.includes('USER_NOT_FOUND')) {
+        console.error('[OAUTH:Error] User not found in DynamoDB - this is likely due to OAuth user not being created')
+        error.value = 'Your Google account was authenticated but not registered in our system. Please try again or contact support.'
+      } else if (err.name === 'TokenValidationError' || err.message?.includes('token')) {
+        console.error('[OAUTH:Error] Token validation failed')
+        error.value = 'Authentication token validation failed. Please try signing in again.'
+      } else {
+        error.value = err.message || 'Google OAuth authentication failed'
+      }
+      
+      // Log detailed diagnostic information
+      console.log('[OAUTH:Diagnostics] Error context:', {
+        appName: localAppName,
+        channelId: localChannelId,
+        hasRedirectUrl: !!localRedirectUrl,
+        errorType: err.name,
+        errorMessage: err.message
+      })
     } finally {
       loading.value = false
     }
